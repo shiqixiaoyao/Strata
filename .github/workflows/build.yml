@@ -1,6 +1,8 @@
 name: Xcode - Build
 
 on: 
+  push:
+    branches: [ main ]
   workflow_dispatch:
     inputs: 
       release__nightly:
@@ -28,6 +30,19 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
+      - name: Merge Chinese Localization
+        run: |
+          python3 -c "
+          import json
+          with open('Resources/Localizable.xcstrings', 'r', encoding='utf-8') as f:
+              main_cat = json.load(f)
+          with open('Resources/Strata2-zh-Hans.xcstrings-fragment.json', 'r', encoding='utf-8') as f:
+              frag = json.load(f)
+          main_cat['strings'].update(frag)
+          with open('Resources/Localizable.xcstrings', 'w', encoding='utf-8') as f:
+              json.dump(main_cat, f, ensure_ascii=False, indent=2)
+          print('Successfully merged Chinese localization!')
+          "
       - name: Set Scheme
         id: scheme
         run: |
