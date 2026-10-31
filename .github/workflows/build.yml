@@ -34,21 +34,54 @@ jobs:
         run: |
           python3 -c "
           import json
-          with open('Resources/Localizable.xcstrings', 'r', encoding='utf-8') as f:
-              main_cat = json.load(f)
-          with open('Resources/Strata2-zh-Hans.xcstrings-fragment.json', 'r', encoding='utf-8') as f:
-              frag = json.load(f)
-          main_cat['strings'].update(frag)
-          with open('Resources/Localizable.xcstrings', 'w', encoding='utf-8') as f:
-              json.dump(main_cat, f, ensure_ascii=False, indent=2)
-          print('Successfully merged Chinese localization!')
+          from pathlib import Path
+
+          catalog_path = Path('Resources/Localizable.xcstrings')
+          fragment_path = Path('Resources/Strata2-zh-Hans.xcstrings-fragment.json')
+          with catalog_path.open(encoding='utf-8') as f:
+              catalog = json.load(f)
+          with fragment_path.open(encoding='utf-8') as f:
+              fragment = json.load(f)
+
+          if not isinstance(catalog, dict) or not isinstance(catalog.get('strings'), dict):
+              raise ValueError('Localizable.xcstrings must be an Apple string catalog with a strings object')
+          if not isinstance(fragment, dict):
+              raise ValueError('Chinese localization fragment must be a JSON object')
+
+          for key, value in fragment.items():
+              if not isinstance(key, str) or not isinstance(value, str):
+                  raise ValueError(f'Expected string key/value in Chinese fragment: {key!r}')
+              entry = catalog['strings'].setdefault(key, {})
+              if not isinstance(entry, dict):
+                  raise ValueError(f'Invalid catalog entry for {key!r}')
+              localizations = entry.setdefault('localizations', {})
+              if not isinstance(localizations, dict):
+                  raise ValueError(f'Invalid localizations object for {key!r}')
+              localizations['zh-Hans'] = {
+                  'stringUnit': {
+                      'state': 'translated',
+                      'value': value
+                  }
+              }
+
+          # Confirm the generated document remains valid JSON and catalog structure.
+          output = json.dumps(catalog, ensure_ascii=False, indent=2) + '\\n'
+          parsed = json.loads(output)
+          if not isinstance(parsed.get('strings'), dict):
+              raise ValueError('Generated catalog is missing its strings object')
+          for key in fragment:
+              unit = parsed['strings'][key]['localizations']['zh-Hans']['stringUnit']
+              if unit.get('state') != 'translated' or not isinstance(unit.get('value'), str):
+                  raise ValueError(f'Invalid zh-Hans string unit for {key!r}')
+          catalog_path.write_text(output, encoding='utf-8')
+          print(f'Successfully merged {len(fragment)} Chinese localizations into Apple string catalog!')
           "
       - name: Set Scheme
         id: scheme
         run: |
           if [ $scheme = default ]
           then
-            scheme_list=$(xcodebuild -list -json | tr -d "\n")
+            scheme_list=$(xcodebuild -list -json | tr -d "\\n")
             scheme=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
             echo Using default scheme: $scheme
           else
@@ -58,12 +91,12 @@ jobs:
       - name: Set filetype_parameter
         id: filetype_parameter
         run: |
-          filetype_parameter=`ls -A | grep -i \\.xcworkspace\$ && echo workspace || echo project`
+          filetype_parameter=`ls -A | grep -i \\\\.xcworkspace\\$ && echo workspace || echo project`
           echo "filetype_parameter=$filetype_parameter" >> $GITHUB_OUTPUT
       - name: Set file_to_build
         id: file_to_build
         run: |
-          file_to_build=`ls -A | grep -i \\.xcworkspace\$ || ls -A | grep -i \\.xcodeproj\$`
+          file_to_build=`ls -A | grep -i \\\\.xcworkspace\\$ || ls -A | grep -i \\\\.xcodeproj\\$`
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
           echo "file_to_build=$file_to_build" >> $GITHUB_OUTPUT
       - name: Archive
