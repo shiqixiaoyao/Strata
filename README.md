@@ -1,5 +1,7 @@
 # Strata 2.0
 
+**English** | [简体中文](README.zh-CN.md)
+
 A customizable launcher built on [LiveContainer](https://github.com/LiveContainer/LiveContainer), with three interfaces and bundled SideStore support.
 
 <p align="center"><img src="Resources/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" width="160" alt="Strata icon"></p>
