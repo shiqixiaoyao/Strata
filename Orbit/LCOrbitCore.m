@@ -169,11 +169,16 @@ static BOOL LCOrbitGuestContextReady(void) {
 }
 
 static BOOL LCOrbitBootstrapped=NO;
+static id LCOrbitActivationObserver=nil;
 static void LCOrbitBootstrapIfNeeded(void) {
     if(LCOrbitBootstrapped) return;
     if(!LCOrbitLaunchEnabled()) return;
     if(!LCOrbitGuestContextReady()) return;
     LCOrbitBootstrapped=YES;
+    if(LCOrbitActivationObserver) {
+        [NSNotificationCenter.defaultCenter removeObserver:LCOrbitActivationObserver];
+        LCOrbitActivationObserver=nil;
+    }
     NSLog(@"[Strata][Orbit] bootstrap enabled, guest=%@",[LCOrbitHost guestIdentifier]);
     LCOrbitCore *core=[LCOrbitCore sharedCore];
     LCFloatingMenuRegisterWithOrbit(core);
@@ -187,4 +192,12 @@ __attribute__((constructor)) static void LCOrbitEntry(void) {
     // 兜底：部分访客的 scene / defaults 就绪较晚，1 秒后再检查一次。
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(1.0*NSEC_PER_SEC)),
                    dispatch_get_main_queue(),^{ LCOrbitBootstrapIfNeeded(); });
+    // 访客进程可能早在开关打开之前就已运行（Strata 2.0 多任务会复用进程），
+    // 上面两次检查都会错过。每次回到前台再确认一次，成功后移除观察者；
+    // 开关关闭时这里只是一次 BOOL 读取，不创建任何 UI。
+    LCOrbitActivationObserver=[NSNotificationCenter.defaultCenter
+        addObserverForName:UIApplicationDidBecomeActiveNotification object:nil
+        queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){
+            LCOrbitBootstrapIfNeeded();
+        }];
 }
