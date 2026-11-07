@@ -54,6 +54,32 @@ static NSDictionary *LegacyValues(void) {
 }
 static NSString *ConfigPath(NSString *root) { return [root stringByAppendingPathComponent:@"config.json"]; }
 static NSString *BackupPath(NSString *root) { return [root stringByAppendingPathComponent:@"config.last-good.json"]; }
+
+// Strata: 读取任意一项设置原本都要 flock + 解析 config.json 与 backup 两份 JSON。
+// 悬浮菜单每帧的几何计算会连读十几个值，主线程会被磁盘 IO 拖住。这里按配置
+// 文件的 stat 指纹做进程内缓存：命中时只做一次 lstat；其他进程（宿主 / 其他访客）
+// 写入会改变 mtime / ctime / size / inode，缓存随即失效，跨进程语义不变。
+static NSMutableDictionary<NSString *,NSDictionary *> *CachedValues;
+static NSMutableDictionary<NSString *,NSDictionary *> *CachedStamp;
+static NSDictionary *ConfigStamp(NSString *root) {
+    if(!root.length) return nil;
+    struct stat info;
+    if(lstat(ConfigPath(root).fileSystemRepresentation,&info)!=0 || !S_ISREG(info.st_mode)) return nil;
+#if defined(__APPLE__)
+    long long msec=(long long)info.st_mtimespec.tv_sec, mnano=(long long)info.st_mtimespec.tv_nsec;
+    long long csec=(long long)info.st_ctimespec.tv_sec, cnano=(long long)info.st_ctimespec.tv_nsec;
+#else
+    long long msec=(long long)info.st_mtime, mnano=0;
+    long long csec=(long long)info.st_ctime, cnano=0;
+#endif
+    return @{@"dev":@(info.st_dev),@"ino":@(info.st_ino),@"size":@(info.st_size),
+             @"mtime":@(msec),@"mtimeNano":@(mnano),
+             @"ctime":@(csec),@"ctimeNano":@(cnano)};
+}
+static void EnsureCaches(void) {
+    if(!CachedValues) CachedValues=[NSMutableDictionary dictionary];
+    if(!CachedStamp) CachedStamp=[NSMutableDictionary dictionary];
+}
 static NSDictionary *ReadDocument(NSString *file,NSError **error) {
     struct stat info;
     if(lstat(file.fileSystemRepresentation,&info)!=0 || !S_ISREG(info.st_mode) || info.st_size<0 || (unsigned long long)info.st_size>MaximumConfigSize) {
@@ -123,8 +149,8 @@ static NSDictionary *Load(NSString *root,BOOL *valid,NSError **error) {
     }
     if(*valid) {
         LastGood[root]=[values copy];
-        NSDictionary *backup=ReadDocument(BackupPath(root),nil);
-        if(![backup isEqual:values]) WriteDocument(BackupPath(root),values,nil);
+        // Strata: 读路径不再每次解析并回写 backup。setObject: 写入时已同时
+        // 维护 config.json 与 backup，这里的比较属于纯重复 IO。
         return values;
     }
     NSDictionary *recovered=ReadDocument(BackupPath(root),nil) ?: LastGood[root] ?: LegacyValues();
@@ -133,13 +159,30 @@ static NSDictionary *Load(NSString *root,BOOL *valid,NSError **error) {
 }
 static NSDictionary *ReadValues(void) {
     @synchronized(LCOrbitStorage.class) {
-        NSError *error=nil;NSString *root=[LCOrbitStorage rootPath];int lock=LockRoot(root,&error);
+        EnsureCaches();
+        NSError *error=nil;NSString *root=[LCOrbitStorage rootPath];
+        // Fast path: an unchanged config.json is served from memory. lstat is
+        // cheap and picks up writes made by the host or another guest process.
+        if(root.length) {
+            NSDictionary *stamp=ConfigStamp(root),*cached=CachedValues[root];
+            if(cached && stamp && [stamp isEqualToDictionary:CachedStamp[root]]) {
+                StorageError=nil;
+                return cached;
+            }
+        }
+        int lock=LockRoot(root,&error);
         if(lock<0) {
             StorageError=error?:Error(@"无法访问 LC 宿主配置目录。");
             return (root?LastGood[root]:nil) ?: LegacyValues();
         }
         BOOL valid=NO;NSDictionary *values=Load(root,&valid,&error);
-        Unlock(lock);StorageError=error;return values;
+        Unlock(lock);StorageError=error;
+        if(root.length && values && !error) {
+            NSDictionary *stamp=ConfigStamp(root);
+            if(stamp) { CachedValues[root]=values;CachedStamp[root]=stamp; }
+            else { [CachedValues removeObjectForKey:root];[CachedStamp removeObjectForKey:root]; }
+        }
+        return values;
     }
 }
 @implementation LCOrbitPreferences
@@ -171,6 +214,11 @@ static NSDictionary *ReadValues(void) {
             if(value) next[key]=value;else [next removeObjectForKey:key];
             if(WriteDocument(ConfigPath(root),next,&error)) {
                 LastGood[root]=[next copy];WriteDocument(BackupPath(root),next,nil);
+                // Strata: 让本进程的下一次读取立刻看到新值，无需再解析一次 JSON。
+                EnsureCaches();
+                NSDictionary *stamp=ConfigStamp(root);
+                if(stamp) { CachedValues[root]=[next copy];CachedStamp[root]=stamp; }
+                else { [CachedValues removeObjectForKey:root];[CachedStamp removeObjectForKey:root]; }
             }
         }
         Unlock(lock);StorageError=error;

@@ -461,7 +461,9 @@ static NSArray<NSDictionary *> *FMOrbStyleOptions(void) {
     return options;
 }
 static NSArray<NSDictionary *> *FMMenuStyleOptions(void) {
-    return @[
+    // Strata: 该函数落在抽屉的每帧几何路径上，不能每次重建选项数组。
+    static NSArray *options;static dispatch_once_t once;
+    dispatch_once(&once, ^{ options=@[
         @{@"key":@"menuExtension",@"title":@"上下延展长度",@"min":@12,@"max":@44,@"default":@28,@"unit":@"点",@"step":@1},
         @{@"key":@"menuCornerRadius",@"title":@"外框圆角半径",@"min":@8,@"max":@36,@"default":@26,@"unit":@"点",@"step":@1},
         @{@"key":@"menuCurveSoftness",@"title":@"凹角弧度",@"min":@.2,@"max":@.9,@"default":@.64,@"unit":@"%",@"step":@.01},
@@ -470,24 +472,33 @@ static NSArray<NSDictionary *> *FMMenuStyleOptions(void) {
         // On top of whatever the head needs cleared, none of it by default; below zero it
         // lifts the whole block instead, as far as the top edge.
         @{@"key":@"menuTopPadding",@"title":@"上方留白",@"min":@(-16),@"max":@40,@"default":@0,@"unit":@"点",@"step":@1}
-    ];
+    ]; });
+    return options;
 }
 // The same lookup for the drawer's shape while a morph is being prepared: staged values win,
 // and a box is rebuilt only when one of them changes.
+// Strata: 每帧几何代码要取十几个样式值，原实现每次都遍历一个（或重建的）
+// 选项数组。改成一次性建好的 key -> option 索引，查表 O(1)、零临时分配。
+static NSDictionary *FMStyleIndex(NSArray<NSDictionary *> *options) {
+    NSMutableDictionary *index=[NSMutableDictionary dictionaryWithCapacity:options.count];
+    for(NSDictionary *option in options) index[option[@"key"]]=option;
+    return [index copy];
+}
+static CGFloat FMStyleOptionValue(NSString *key,NSDictionary *index) {
+    NSDictionary *option=index[key];
+    if(!option) return 0;
+    CGFloat fallback=[option[@"default"] doubleValue],value=FloatPref(key,fallback);
+    return Clamp(isfinite(value)?value:fallback,[option[@"min"] doubleValue],[option[@"max"] doubleValue]);
+}
 static CGFloat FMMenuStyleValue(NSString *key) {
-    for(NSDictionary *option in FMMenuStyleOptions()) if([option[@"key"] isEqualToString:key]) {
-        CGFloat fallback=[option[@"default"] doubleValue],value=FloatPref(key,fallback);
-        return Clamp(isfinite(value)?value:fallback,[option[@"min"] doubleValue],[option[@"max"] doubleValue]);
-    }
-    return 0;
+    static NSDictionary *index;static dispatch_once_t once;
+    dispatch_once(&once,^{ index=FMStyleIndex(FMMenuStyleOptions()); });
+    return FMStyleOptionValue(key,index);
 }
 static CGFloat FMOrbStyleValue(NSString *key) {
-    for(NSDictionary *option in FMOrbStyleOptions()) if([option[@"key"] isEqualToString:key]) {
-        CGFloat fallback=[option[@"default"] doubleValue];
-        CGFloat value=FloatPref(key,fallback);
-        return Clamp(isfinite(value)?value:fallback,[option[@"min"] doubleValue],[option[@"max"] doubleValue]);
-    }
-    return 0;
+    static NSDictionary *index;static dispatch_once_t once;
+    dispatch_once(&once,^{ index=FMStyleIndex(FMOrbStyleOptions()); });
+    return FMStyleOptionValue(key,index);
 }
 // 0 is the capsule, 1 the droplet.
 static BOOL FMOrbHandleIsCapsule(void) {
@@ -8210,9 +8221,11 @@ static UIView *FMDockCard(UIStackView *rows) {
     }
     FMLog(@"dylib-loaded",hostUI?@"orbit-module context=lc-host":@"orbit-module");
     if(hostUI) FMLog(@"host-ready",@"JSON configuration and logs in Documents/LCOrbit");
-    // Let the rest of TweakLoader complete before auditing loaded images.
+    // Strata: 快照会递归扫 tweak 目录、枚举已加载镜像并写日志，原本在启动
+    // 一秒后跑在主线程上，正好撞上访客首帧交互。该文件不接触 UIKit，移到
+    // 低优先级全局队列即可，日志写入本身也已异步化。
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(1.0*NSEC_PER_SEC)),
-                   dispatch_get_main_queue(),^{
+                   dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0),^{
         [LCOrbitTweakAudit captureSnapshot];
     });
     [[FMManager shared] installIfPossible];

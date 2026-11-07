@@ -132,6 +132,16 @@ static NSMutableArray *CurrentEvents(NSString *path) {
     return [NSMutableArray array];
 }
 
+// Strata: 写日志原本在调用线程（通常是主线程）同步做 flock + 读全量 JSON +
+// 追加 + 写盘。开菜单、切 App、手势结束都会触发，造成可感知的顿挫。
+// 所有日志操作改走同一条后台串行队列；读/清用 dispatch_sync 保证顺序，
+// 跨进程仍由原有的 flock 保护。
+static dispatch_queue_t LCOrbitLogQueue(void) {
+    static dispatch_queue_t queue;static dispatch_once_t once;
+    dispatch_once(&once,^{ queue=dispatch_queue_create("LCOrbit.log",DISPATCH_QUEUE_SERIAL); });
+    return queue;
+}
+
 @implementation LCOrbitLog
 + (NSString *)pathForKind:(NSString *)kind {
     if(!Kind(kind)) return nil;
@@ -139,47 +149,56 @@ static NSMutableArray *CurrentEvents(NSString *path) {
     return root.length?[[root stringByAppendingPathComponent:@"logs"] stringByAppendingPathComponent:[kind stringByAppendingString:@".json"]]:nil;
 }
 + (void)appendEvent:(NSString *)event details:(id)details kind:(NSString *)kind {
-    @try { @synchronized(self) {
-        NSString *path=[self pathForKind:kind];if(!path) return;
-        int descriptor=Lock(path);if(descriptor<0) return;
-        @try {
-            ImportLegacy(path,kind);
-            NSMutableArray *events=CurrentEvents(path);
-            [events addObject:Event(event,details)];
-            NSData *bytes=Encode(events);
-            if(bytes.length>LogLimit) {
-                NSArray *previous=[events subarrayWithRange:NSMakeRange(0,events.count-1)];
-                NSData *old=Encode(previous);
-                if(old.length<=LogLimit && ![old writeToFile:OldPath(path) atomically:YES]) return;
-                bytes=Encode(@[events.lastObject]);
-            }
-            if(bytes.length<=LogLimit) [bytes writeToFile:path atomically:YES];
-        } @finally { Unlock(descriptor); }
-    } } @catch(NSException *exception) { /* Logging must never break the guest. */ }
+    NSString *path=[self pathForKind:kind];if(!path) return;
+    dispatch_async(LCOrbitLogQueue(),^{
+        @try { @synchronized(self) {
+            NSDictionary *record=Event(event,details);
+            int descriptor=Lock(path);if(descriptor<0) return;
+            @try {
+                ImportLegacy(path,kind);
+                NSMutableArray *events=CurrentEvents(path);
+                [events addObject:record];
+                NSData *bytes=Encode(events);
+                if(bytes.length>LogLimit) {
+                    NSArray *previous=[events subarrayWithRange:NSMakeRange(0,events.count-1)];
+                    NSData *old=Encode(previous);
+                    if(old.length<=LogLimit && ![old writeToFile:OldPath(path) atomically:YES]) return;
+                    bytes=Encode(@[events.lastObject]);
+                }
+                if(bytes.length<=LogLimit) [bytes writeToFile:path atomically:YES];
+            } @finally { Unlock(descriptor); }
+        } } @catch(NSException *exception) { /* Logging must never break the guest. */ }
+    });
 }
 + (NSData *)dataForKind:(NSString *)kind {
-    @try { @synchronized(self) {
-        NSString *path=[self pathForKind:kind];if(!path) return Encode(@[]);
-        int descriptor=Lock(path);if(descriptor<0) return Encode(@[]);
-        @try {
-            ImportLegacy(path,kind);
-            NSMutableArray *events=[NSMutableArray arrayWithArray:ReadEvents(OldPath(path))?:@[]];
-            [events addObjectsFromArray:ReadEvents(path)?:@[]];
-            return Encode(events)?:Encode(@[]);
-        } @finally { Unlock(descriptor); }
-    } } @catch(NSException *exception) { return Encode(@[]); }
+    __block NSData *result=Encode(@[]);
+    dispatch_sync(LCOrbitLogQueue(),^{
+        @try { @synchronized(self) {
+            NSString *path=[self pathForKind:kind];if(!path) return;
+            int descriptor=Lock(path);if(descriptor<0) return;
+            @try {
+                ImportLegacy(path,kind);
+                NSMutableArray *events=[NSMutableArray arrayWithArray:ReadEvents(OldPath(path))?:@[]];
+                [events addObjectsFromArray:ReadEvents(path)?:@[]];
+                result=Encode(events)?:Encode(@[]);
+            } @finally { Unlock(descriptor); }
+        } } @catch(NSException *exception) { }
+    });
+    return result;
 }
 + (void)clearKind:(NSString *)kind {
-    @try { @synchronized(self) {
-        NSString *path=[self pathForKind:kind];if(!path) return;
-        int descriptor=Lock(path);if(descriptor<0) return;
-        @try {
-            if([Encode(@[]) writeToFile:path atomically:YES]) {
-                [NSData.data writeToFile:[path stringByAppendingString:@".migrated"] atomically:YES];
-                [NSFileManager.defaultManager removeItemAtPath:OldPath(path) error:nil];
-                [NSFileManager.defaultManager removeItemAtPath:[path.stringByDeletingPathExtension stringByAppendingString:@".corrupt.json"] error:nil];
-            }
-        } @finally { Unlock(descriptor); }
-    } } @catch(NSException *exception) { }
+    dispatch_sync(LCOrbitLogQueue(),^{
+        @try { @synchronized(self) {
+            NSString *path=[self pathForKind:kind];if(!path) return;
+            int descriptor=Lock(path);if(descriptor<0) return;
+            @try {
+                if([Encode(@[]) writeToFile:path atomically:YES]) {
+                    [NSData.data writeToFile:[path stringByAppendingString:@".migrated"] atomically:YES];
+                    [NSFileManager.defaultManager removeItemAtPath:OldPath(path) error:nil];
+                    [NSFileManager.defaultManager removeItemAtPath:[path.stringByDeletingPathExtension stringByAppendingString:@".corrupt.json"] error:nil];
+                }
+            } @finally { Unlock(descriptor); }
+        } } @catch(NSException *exception) { }
+    });
 }
 @end
