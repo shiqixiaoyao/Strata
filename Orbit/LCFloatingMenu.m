@@ -2081,10 +2081,11 @@ static void FMPopItems(NSArray<NSDictionary *> *items,NSArray<UIView *> *divider
        !isfinite(sceneBounds.size.width) || !isfinite(sceneBounds.size.height) ||
        sceneBounds.size.width<=0 || sceneBounds.size.height<=0) return;
     SEL sideSel=NSSelectorFromString(@"isSideStore");
-    SEL procSel=NSSelectorFromString(@"isLiveProcess");
-    if(![NSUserDefaults respondsToSelector:sideSel] || ![NSUserDefaults respondsToSelector:procSel]) return;
-    if(((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,sideSel) ||
-       ((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,procSel)) return;
+    if(![NSUserDefaults respondsToSelector:sideSel]) return;
+    // Strata: 原插件把 isLiveProcess 一并排除（切换器属于宿主），但 Strata 2.0
+    // 的多任务访客本身就跑在 LiveProcess.appex，排除后微珠永远挂不上。
+    // 宿主/访客已由上面的 GuestInfo() / FMHostUI() 判定，这里只需避开内置 SideStore。
+    if(((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,sideSel)) return;
     if(self.window && self.window.windowScene != scene) [self detachFromScene];
     FMStyleScene=scene;
     [self observeAppearanceInScene:scene];

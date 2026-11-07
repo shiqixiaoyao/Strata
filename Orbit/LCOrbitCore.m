@@ -133,26 +133,58 @@
 
 extern void LCFloatingMenuRegisterWithOrbit(LCOrbitCore *core);
 
-// Strata: 本文件已随 TweakLoader 一起注入每个访客，不能再无条件启动。
-// 宿主（LCBootstrap.m）在启动访客前用 LC_ORBIT_ENABLED=1 表示用户开启了悬浮菜单；
-// 没有这个环境变量就完全不介入，保持访客行为与上游一致。
+// Strata: Orbit / 悬浮菜单已随 TweakLoader 注入每一个访客。
+// 开关保存在 App Group defaults（设置页的 @AppStorage），宿主启动访客时还会
+// 额外 setenv("LC_ORBIT_ENABLED","1")。两者任一为开即启用，避免跨进程
+// (LiveProcess.appex) 或 dyld 初始化顺序导致环境变量读不到。
+// 判定放在主队列里做，此时 guestAppInfo / defaults 都已就绪。
+static NSUserDefaults *LCOrbitSharedDefaults(void) {
+    SEL shared=NSSelectorFromString(@"lcSharedDefaults");
+    if([NSUserDefaults respondsToSelector:shared]) {
+        id d=((id(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,shared);
+        if([d isKindOfClass:NSUserDefaults.class]) return d;
+    }
+    Class utils=NSClassFromString(@"LCSharedUtils");
+    SEL gid=NSSelectorFromString(@"appGroupID");
+    if(utils && [utils respondsToSelector:gid]) {
+        id group=((id(*)(id,SEL))objc_msgSend)(utils,gid);
+        if([group isKindOfClass:NSString.class] && [group length])
+            return [[NSUserDefaults alloc] initWithSuiteName:group];
+    }
+    return nil;
+}
 static BOOL LCOrbitLaunchEnabled(void) {
-    const char *flag = getenv("LC_ORBIT_ENABLED");
-    return flag && flag[0] == '1';
+    const char *flag=getenv("LC_ORBIT_ENABLED");
+    if(flag && flag[0]=='1') return YES;
+    return [LCOrbitSharedDefaults() boolForKey:@"StrataFloatingMenuEnabled"];
+}
+
+// 只在访客上下文启动；宿主主界面（LCLoadTweaksToSelf）与内置 SideStore 不显示悬浮球。
+static BOOL LCOrbitGuestContextReady(void) {
+    if(![LCOrbitHost guestInfo]) return NO;
+    SEL side=NSSelectorFromString(@"isSideStore");
+    if([NSUserDefaults respondsToSelector:side] &&
+       ((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,side)) return NO;
+    return YES;
+}
+
+static BOOL LCOrbitBootstrapped=NO;
+static void LCOrbitBootstrapIfNeeded(void) {
+    if(LCOrbitBootstrapped) return;
+    if(!LCOrbitLaunchEnabled()) return;
+    if(!LCOrbitGuestContextReady()) return;
+    LCOrbitBootstrapped=YES;
+    NSLog(@"[Strata][Orbit] bootstrap enabled, guest=%@",[LCOrbitHost guestIdentifier]);
+    LCOrbitCore *core=[LCOrbitCore sharedCore];
+    LCFloatingMenuRegisterWithOrbit(core);
+    [core start];
 }
 
 __attribute__((constructor)) static void LCOrbitEntry(void) {
-    if(!LCOrbitLaunchEnabled()) return;
-    // Shared global tweaks can load this image into a LiveProcess even though
-    // the switcher belongs exclusively to the host. LiveProcess has separate
-    // defaults, so do not depend on a host preference being present here.
-    // Classic single-task Guests are not LiveProcess and still bootstrap.
-    SEL process=NSSelectorFromString(@"isLiveProcess");
-    if([NSUserDefaults respondsToSelector:process] &&
-       ((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,process)) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        LCOrbitCore *core=[LCOrbitCore sharedCore];
-        LCFloatingMenuRegisterWithOrbit(core);
-        [core start];
-    });
+    // Strata: 绝不能按 isLiveProcess 跳过 —— Strata 2.0 的多任务访客就运行在
+    // LiveProcess.appex 里，原插件的这条拦截会让悬浮菜单完全不出现。
+    dispatch_async(dispatch_get_main_queue(), ^{ LCOrbitBootstrapIfNeeded(); });
+    // 兜底：部分访客的 scene / defaults 就绪较晚，1 秒后再检查一次。
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(1.0*NSEC_PER_SEC)),
+                   dispatch_get_main_queue(),^{ LCOrbitBootstrapIfNeeded(); });
 }
