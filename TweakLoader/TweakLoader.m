@@ -34,12 +34,25 @@ static NSString *loadTweakAtURL(NSURL *url) {
     }
 }
 
+// Strata: Orbit / 悬浮菜单已经直接编进 TweakLoader.dylib。
+// 旧版本手动导入到 Tweaks 目录的 LCFloatingMenu*.dylib / LCOrbit*.dylib
+// 往往没有有效签名（dlopen 会报 missing code signature），加载成功也会和
+// 内置类重复注册。这里把它们当作内置模块跳过，完成自动迁移，无需用户手动删文件。
+static BOOL isBuiltInOrbitTweak(NSString *name) {
+    NSString *lower = name.lowercaseString;
+    return [lower hasPrefix:@"lcfloatingmenu"] || [lower hasPrefix:@"lcorbit"];
+}
+
 static void loadTweaksRecursively(NSURL *folderURL, NSMutableArray *errors) {
     NSArray<NSURL *> *items = [NSFileManager.defaultManager contentsOfDirectoryAtURL:folderURL includingPropertiesForKeys:@[NSURLIsDirectoryKey] options:0 error:nil];
     for (NSURL *fileURL in items) {
         NSString *name = fileURL.lastPathComponent;
         if ([name hasSuffix:@".disabled"]) {
             NSLog(@"Skipping disabled tweak %@", name);
+            continue;
+        }
+        if (isBuiltInOrbitTweak(name)) {
+            NSLog(@"Skipping built-in Orbit tweak %@", name);
             continue;
         }
         NSNumber *isDirectory = nil;
@@ -125,6 +138,10 @@ static void TweakLoaderConstructor() {
         }
         if ([name hasSuffix:@".disabled"]) {
             NSLog(@"Skipping disabled global tweak %@", name);
+            continue;
+        }
+        if (isBuiltInOrbitTweak(name)) {
+            NSLog(@"Skipping built-in Orbit tweak %@", name);
             continue;
         }
         NSString *error = loadTweakAtURL(fileURL);
