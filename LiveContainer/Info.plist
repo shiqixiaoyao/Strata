@@ -34,7 +34,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.10</string>
+	<string>3.8.15</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -49,7 +49,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>3.8.10</string>
+	<string>3.8.15</string>
 	<key>GCSupportedGameControllers</key>
 	<array>
 		<dict>
@@ -324,5 +324,34 @@
 	</array>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+			<key>UTTypeDescription</key>
+			<string>LiveContainer tweak dylib</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.dylib</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array><string>dylib</string></array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.directory</string></array>
+			<key>UTTypeDescription</key>
+			<string>LiveContainer tweak framework</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.tweak-framework</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array><string>framework</string></array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

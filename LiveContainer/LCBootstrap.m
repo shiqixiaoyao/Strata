@@ -309,6 +309,9 @@ static NSString* invokeAppMain(NSString *selectedApp, NSString *selectedContaine
     [lcSharedDefaults setObject:hudRequests forKey:@"StrataMetalHUDApps"];
     if (strataMetalHUD) setenv("MTL_HUD_ENABLED", "1", 1);
 
+    // 悬浮菜单（Orbit/LCFloatingMenu）已编进 TweakLoader，默认不启动，由设置里的开关决定
+    if ([lcSharedDefaults boolForKey:@"StrataFloatingMenuEnabled"]) setenv("LC_ORBIT_ENABLED", "1", 1);
+
     if([guestAppInfo[@"doUseLCBundleId"] boolValue] ) {
         NSMutableDictionary* infoPlist = [NSMutableDictionary dictionaryWithContentsOfFile:[NSString stringWithFormat:@"%@/Info.plist", bundlePath]];
         CFErrorRef error = NULL;
