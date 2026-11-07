@@ -102,7 +102,11 @@ public struct DocModifier: ViewModifier {
                 controller.allowsMultipleSelection = multiple
                 controller.delegate = delegate
                 self.docController = controller
-                sceneDelegate.window?.rootViewController?.present(controller, animated: true)
+                // Strata: 若当前已有 sheet / 弹窗，直接 rootViewController.present 会静默
+                // 失败，表现为点「导入模块」没反应。改从最顶层已呈现的控制器 present。
+                var host = sceneDelegate.window?.rootViewController
+                while let presented = host?.presentedViewController { host = presented }
+                host?.present(controller, animated: true)
             } else if !isPresented, let docController = docController {
                 docController.dismiss(animated: true)
                 self.docController = nil
