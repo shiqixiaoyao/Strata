@@ -69,6 +69,7 @@ struct LCSettingsView: View {
     @AppStorage("LCWaitForDebugger") var waitForDebugger = false
     @AppStorage("LCSharePrivateDataWithLiveProcess") var sharePrivateDataWithLiveProcess = false
     @AppStorage("BKNoWatchdogs") var disableLiveProcessWatchdog = false
+    @AppStorage("StrataFloatingMenuEnabled", store: LCUtils.appGroupUserDefault) var floatingMenu = false
     
     @EnvironmentObject private var sharedModel : SharedModel
     
@@ -219,6 +220,15 @@ struct LCSettingsView: View {
                     Text("lc.settings.interface".loc)
                 } footer: {
                     Text("lc.settings.dynamicColors.desc".loc)
+                }
+                Section{
+                    Toggle(isOn: $floatingMenu) {
+                        Text("strata.settings.floatingMenu".loc)
+                    }
+                } header: {
+                    Text("strata.settings.floatingMenuSection".loc)
+                } footer: {
+                    Text("strata.settings.floatingMenuDesc".loc)
                 }
                 Section{
                     Toggle(isOn: $frameShortIcon) {

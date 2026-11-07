@@ -134,7 +134,7 @@ struct StrataMemorySettings: View {
             Section("Installed memory permissions") {
                 Label(snapshot["hostMemory"] as? Bool == true ? "Strata: extra memory allowed" : "Strata: standard memory permission", systemImage: "memorychip")
                 Label(snapshot["guestMemory"] as? Bool == true ? "Guest process: extra memory requested in signature" : "Guest process: standard memory signature", systemImage: "app.connected.to.app.below.fill")
-                Text("Available to Strata now: \(snapshot["availableMB"] as? UInt64 ?? (snapshot["availableMB"] as? NSNumber)?.uint64Value ?? 0) MB")
+                Text(LCStr("strata.memory.availableNow", "Available to Strata now: %llu MB", snapshot["availableMB"] as? UInt64 ?? (snapshot["availableMB"] as? NSNumber)?.uint64Value ?? 0))
                 Button("Refresh status") { snapshot = LCUtils.strataMemoryStatus() as? [String: Any] ?? [:] }
             }
             Section("Latest running-app memory sample") {
@@ -147,10 +147,10 @@ struct StrataMemorySettings: View {
                     Text(inProcess ? "Normal launch: runs inside Strata's process" : "Runs in a separate guest process").font(.caption)
                     Label(sample["increasedMemoryEntitlement"] as? Bool == true ? "Running process: extra memory entitlement present" : "Running process: standard memory entitlement", systemImage: "memorychip")
                     if sample["availableReported"] as? Bool == true, let bytes = sample["availableBytes"] as? NSNumber {
-                        Text("Available to running app at sample: \(bytes.uint64Value / 1_048_576) MB")
+                        Text(LCStr("strata.memory.availableAtSample", "Available to running app at sample: %llu MB", bytes.uint64Value / 1_048_576))
                     } else { Text("iOS did not report memory headroom for this process.") }
                     if sample["footprintReported"] as? Bool == true, let bytes = sample["footprintBytes"] as? NSNumber {
-                        Text("Running app memory used at sample: \(bytes.uint64Value / 1_048_576) MB")
+                        Text(LCStr("strata.memory.usedAtSample", "Running app memory used at sample: %llu MB", bytes.uint64Value / 1_048_576))
                     }
                     Text("Sampled: " + Date(timeIntervalSince1970: timestamp).formatted(date: .abbreviated, time: .standard)).font(.caption)
                     Button("Copy app memory report") {

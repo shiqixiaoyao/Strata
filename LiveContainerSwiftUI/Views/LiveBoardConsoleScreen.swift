@@ -387,7 +387,7 @@ struct LiveBoardConsoleScreen: View {
                 Section("Cover size") {
                     Slider(value: Binding(get: { consoleLayout.iconScale }, set: { value in updateConsoleLayout { $0.iconScale = value } }), in: 0.65...2.5)
                         .accessibilityIdentifier("console.layout.scale")
-                    Text("\(Int(consoleLayout.iconScale * 100))% · Size is limited to the available screen height.").font(.footnote)
+                    Text(LCStr("strata.console.scaleHint", "%lld%% · Size is limited to the available screen height.", Int(consoleLayout.iconScale * 100))).font(.footnote)
                 }
                 Section("Play button size") {
                     Slider(value: Binding(get: { consoleLayout.launchScale }, set: { value in updateConsoleLayout { $0.launchScale = value } }), in: 0.75...2)
