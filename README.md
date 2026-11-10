@@ -29,7 +29,7 @@ Get **Strata-2.0+SideStore.ipa** from [Releases](https://github.com/huzaifahshah
 
 Strata 2.0 is the product release name; this build uses the LiveContainer **3.8.11** base and development revision **25**. The underlying bundle version/identity are retained for update compatibility. The IPA does not contain personal signing credentials or pairing records.
 
-## Chinese build (v11)
+## Chinese build (v11 → v12)
 
 The `zh-hans` branch ships a fully localized Simplified Chinese UI and README. v11 does two things on top of the rolled-back v7 baseline:
 
@@ -43,6 +43,19 @@ The `zh-hans` branch ships a fully localized Simplified Chinese UI and README. v
 - `strataPresentSafely` works around the SwiftUI `.alert` dismissal race, so the document picker and password prompt no longer fail silently; all `UTType` force unwraps were removed.
 
 The bundle version is **3.8.19**, higher than every previous build, so it can be installed over the top without uninstalling. This build contains **no SideInstaller**; the built-in store entry remains the original SideStore. **1332** Chinese strings are shipped.
+
+### v12: floating menu did not appear even when enabled
+
+The bundled Orbit / LCFloatingMenu is bumped to upstream **1.0.36** (8pt larger close-button hit area), and the bootstrap gate is fixed at the root:
+
+- It no longer requires a non-nil `guestAppInfo` and no longer excludes `isLiveProcess`. Strata 2.0 multitask guests themselves run inside `LiveProcess.appex`, so the old check excluded every guest and the toggle did nothing.
+- Guest detection now compares whether `mainBundle` has been rewritten to the guest bundle; the Strata UI and built-in SideStore still never show the bead.
+- The switch is resolved from the env var, the App Group defaults, and the host defaults in turn; when none of them has a value it defaults to on and writes the value back, so a switch stored in the wrong suite can no longer be read back as "off".
+- Bootstrap attempts now run immediately, at 0.6s, 2s, 5s, and again on foreground / scene activation, so enabling the switch while a guest is running takes effect without relaunching.
+- A status row plus "Copy diagnostics" is added under the floating menu toggle; each guest writes its decision into the App Group so failures are visible.
+- Cleanup: removed the unused `LCOrbitHost.isSupportedGuest` (its logic contradicted LiveProcess guests), removed `GuestInfo()` and a redundant `objc/message` import, and merged the duplicated host/guest/SideStore checks in `installIfPossible` into the single gate in `LCOrbitCore`.
+
+The bundle version is **3.8.20**, and **1337** Chinese strings are shipped.
 
 
 ## JIT and RAM setup

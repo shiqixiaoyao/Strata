@@ -29,7 +29,7 @@
 
 Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与开发修订版 **25**。底层的包版本/标识保持不变，以兼容后续更新。IPA 中不包含个人签名凭据或配对记录。
 
-## 汉化构建（v11）
+## 汉化构建（v11 → v12）
 
 `zh-hans` 分支提供完整简体中文界面与中文 README。v11 在回退后的 v7 基础上做了两件事：
 
@@ -43,6 +43,19 @@ Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与�
 - 新增 `strataPresentSafely`，绕开 SwiftUI `.alert` 关闭竞态，文档选择器与密码框不再静默失败；移除所有 `UTType` 强制解包。
 
 包版本提升到 **3.8.19**，高于此前所有构建，可直接覆盖安装而无需卸载。此构建**不含 SideInstaller**；内置商店入口仍为原来的 SideStore。中文文案共 **1332 条**。
+
+### v12：修复悬浮菜单「开关打开但没有微珠」
+
+内置的 Orbit / LCFloatingMenu 升到上游 **1.0.36**（关闭按钮热区 +8pt），并修掉启动门控的根因：
+
+- **不再要求 `guestAppInfo` 非空、也不再排除 `isLiveProcess`。** Strata 2.0 的多任务访客本身就跑在 `LiveProcess.appex` 里，旧判断会把所有访客排除，开关打开也毫无反应。
+- 访客判定改为比较 `mainBundle` 是否已被改写成访客包；Strata 主界面与内置 SideStore 仍然不显示微珠。
+- 开关依次从环境变量、App Group defaults、宿主 defaults 读取；三处都没写过时按「开启」处理并回写 App Group，避免开关写串 suite 后永远读不到。
+- 启动尝试改为「立即 + 0.6s + 2s + 5s + 回到前台 / 场景激活」。开关在访客运行中打开也能生效，不用重启 App。
+- 设置页「悬浮菜单」下方新增状态行与「复制诊断信息」，访客每次判定都会把结果写进 App Group，出问题时可直接定位卡在哪一步。
+- 顺带清理：删除未使用的 `LCOrbitHost.isSupportedGuest`（其逻辑与 LiveProcess 访客冲突）、删除 `GuestInfo()` 与 `objc/message` 冗余引用，`installIfPossible` 与启动门控重复的宿主/访客/SideStore 判断合并为一处。
+
+包版本提升到 **3.8.20**，中文文案共 **1337 条**。
 
 
 ## JIT 与运存配置

@@ -26,7 +26,7 @@
 
 // Semantic version is maintained here; the exact source commit is embedded
 // automatically by LCOrbit/Build/build.sh for reliable update comparison.
-#define FM_MENU_VERSION @"1.0.35"
+#define FM_MENU_VERSION @"1.0.36"
 #ifndef FM_BUILD_COMMIT
 #define FM_BUILD_COMMIT @"unknown"
 #endif
@@ -161,7 +161,6 @@ static void FMBeginPreferenceSnapshot(void) {
 static void FMEndPreferenceSnapshot(void) {
     if(FMSnapshotDepth && !--FMSnapshotDepth) FMSnapshot=nil;
 }
-static NSDictionary *GuestInfo(void) { return [LCOrbitHost guestInfo]; }
 static BOOL FMHostUI(void) { return [LCOrbitHost isHostUI]; }
 static NSString *GuestID(void) { return [LCOrbitHost guestIdentifier]; }
 static NSString *FMAppKey(NSDictionary *app) { return app[@"identity"] ?: app[@"path"] ?: @""; }
@@ -1634,6 +1633,16 @@ static UIImage *FMGuestIcon(NSDictionary *app) {
 }
 @end
 
+// 关闭按钮：视觉图标尺寸不变，仅向四周扩大点击热区（贴右上角的 xmark 更容易命中）。
+@interface FMCloseHitButton : UIButton
+@end
+@implementation FMCloseHitButton
+- (BOOL)pointInside:(CGPoint)p withEvent:(UIEvent *)event {
+    CGRect hit=CGRectInset(self.bounds,-8,-8);
+    return CGRectContainsPoint(hit,p);
+}
+@end
+
 @interface FMGroupedRowControl : UIControl
 @property(nonatomic,strong) UIColor *idleBackgroundColor;
 @end
@@ -2083,20 +2092,16 @@ static void FMPopItems(NSArray<NSDictionary *> *items,NSArray<UIView *> *divider
     return nil;
 }
 - (void)installIfPossible {
+    // 宿主/访客/内置 SideStore 的判定统一放在 LCOrbitCore 的启动门控里，
+    // 这里只关心「有没有可用的前台 scene」，避免两处条件互相覆盖。
     UIWindowScene *scene=[self foregroundScene];
-    if(!scene || (!GuestInfo() && !FMHostUI())) return;
+    if(!scene) return;
     // During scene transitions UIKit can briefly report invalid geometry.
     // Never feed NaN, infinite, or zero dimensions into a CALayer.
     CGRect sceneBounds=scene.coordinateSpace.bounds;
     if(!isfinite(sceneBounds.origin.x) || !isfinite(sceneBounds.origin.y) ||
        !isfinite(sceneBounds.size.width) || !isfinite(sceneBounds.size.height) ||
        sceneBounds.size.width<=0 || sceneBounds.size.height<=0) return;
-    SEL sideSel=NSSelectorFromString(@"isSideStore");
-    if(![NSUserDefaults respondsToSelector:sideSel]) return;
-    // Strata: 原插件把 isLiveProcess 一并排除（切换器属于宿主），但 Strata 2.0
-    // 的多任务访客本身就跑在 LiveProcess.appex，排除后微珠永远挂不上。
-    // 宿主/访客已由上面的 GuestInfo() / FMHostUI() 判定，这里只需避开内置 SideStore。
-    if(((BOOL(*)(id,SEL))objc_msgSend)(NSUserDefaults.class,sideSel)) return;
     if(self.window && self.window.windowScene != scene) [self detachFromScene];
     FMStyleScene=scene;
     [self observeAppearanceInScene:scene];
@@ -3783,7 +3788,7 @@ static UIView *FMRunningBreathingLight(CGFloat size) {
     row.frame=CGRectMake(0,0,container.bounds.size.width-closeSize-4,height);
     row.autoresizingMask=UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
     [container addSubview:row];
-    UIButton *close=[UIButton buttonWithType:UIButtonTypeCustom];
+    UIButton *close=[FMCloseHitButton buttonWithType:UIButtonTypeCustom];
     close.frame=CGRectMake(container.bounds.size.width-closeSize,(height-closeSize)*.5,
                            closeSize,closeSize);
     close.autoresizingMask=UIViewAutoresizingFlexibleLeftMargin;
@@ -4179,7 +4184,7 @@ static UIView *FMRunningBreathingLight(CGFloat size) {
                     [row.topAnchor constraintEqualToAnchor:container.topAnchor],
                     [row.heightAnchor constraintEqualToConstant:63]
                 ]];
-                UIButton *close=[UIButton buttonWithType:UIButtonTypeCustom];
+                UIButton *close=[FMCloseHitButton buttonWithType:UIButtonTypeCustom];
                 close.translatesAutoresizingMaskIntoConstraints=NO;
                 close.contentHorizontalAlignment=UIControlContentHorizontalAlignmentRight;
                 close.contentVerticalAlignment=UIControlContentVerticalAlignmentTop;

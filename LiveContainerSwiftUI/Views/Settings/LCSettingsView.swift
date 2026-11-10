@@ -227,6 +227,22 @@ struct LCSettingsView: View {
                     Toggle(isOn: $floatingMenu) {
                         Text("strata.settings.floatingMenu".loc)
                     }
+                    Button {
+                        // 访客进程把启动结果写在 App Group 里，这里直接读，
+                        // 打不开悬浮菜单时能立刻看到卡在哪一步，不用连 Xcode。
+                        UIPasteboard.general.string = floatingMenuDiagnostics()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(floatingMenuStatusText())
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.leading)
+                            Text(LCStr("strata.settings.floatingMenuCopy", "复制诊断信息"))
+                                .font(.footnote)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
                 } header: {
                     Text("strata.settings.floatingMenuSection".loc)
                 } footer: {
@@ -475,6 +491,33 @@ struct LCSettingsView: View {
         }
     }
     
+    /// 访客进程（LCOrbitCore）把启动判定结果写进 App Group，宿主这侧直接读出来。
+    func floatingMenuStatusText() -> String {
+        guard let status = LCUtils.appGroupUserDefault.dictionary(forKey: "StrataOrbitStatus"),
+              let phase = status["phase"] as? String else {
+            return LCStr("strata.settings.floatingMenuNoReport",
+                         "还没有访客 App 上报状态，打开任意 App 后回到这里查看。")
+        }
+        let label: String
+        switch phase {
+        case "started": label = LCStr("strata.orbit.phase.started", "已启动")
+        case "switch-off": label = LCStr("strata.orbit.phase.switchOff", "开关未开启")
+        case "not-guest": label = LCStr("strata.orbit.phase.notGuest", "非访客进程（Strata 主界面）")
+        default: label = phase
+        }
+        let guest = status["guest"] as? String ?? ""
+        return guest.isEmpty ? label : "\(label) · \(guest)"
+    }
+
+    func floatingMenuDiagnostics() -> String {
+        let status = LCUtils.appGroupUserDefault.dictionary(forKey: "StrataOrbitStatus") ?? [:]
+        var lines = ["Strata floating menu diagnostics", "switch = \(floatingMenu)"]
+        for key in ["phase", "detail", "guest", "date"] {
+            lines.append("\(key) = \(String(describing: status[key] ?? "-"))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     func openGitHub() {
         UIApplication.shared.open(URL(string: "https://github.com/LiveContainer/LiveContainer")!)
     }

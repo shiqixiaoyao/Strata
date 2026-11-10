@@ -279,7 +279,7 @@
   "strata.memory.availableNow": "Strata 当前可用：%llu MB",
   "strata.memory.usedAtSample": "采样时运行中 App 已用：%llu MB",
   "strata.settings.floatingMenu": "在访客 App 内显示悬浮菜单",
-  "strata.settings.floatingMenuDesc": "开启后，从屏幕边缘滑出的微珠可直接返回 Strata、重启当前 App 或切换到其他 App。该功能已随 App 内置，无需再单独导入并签名 dylib。修改后需重新启动访客 App 才会生效。",
+  "strata.settings.floatingMenuDesc": "开启后，从屏幕边缘滑出的微珠可直接返回 Strata、重启当前 App 或切换到其他 App。该功能已随 App 内置，无需再单独导入并签名 dylib；改开关后切回访客 App 即可生效，无需重启。",
   "strata.settings.floatingMenuSection": "悬浮菜单",
   "strata.widget.batteries": "电池",
   "strata.widget.calendar": "日历",
@@ -998,5 +998,10 @@
   "strata.cert.imported": "证书已导入，可在「JIT-Less 诊断」中验证。",
   "strata.cert.hint": "可从「文件」App 直接打开证书，或在下方选择 .p12 文件；密码留空即可导入空密码证书。",
   "strata.tweak.imported": "模块已导入，可在列表中启用。",
-  "lc.appSettings.helperProcessesSupport": "启用应用辅助进程"
+  "lc.appSettings.helperProcessesSupport": "启用应用辅助进程",
+  "strata.settings.floatingMenuNoReport": "还没有访客 App 上报状态。打开任意 App，再回到这里查看结果。",
+  "strata.settings.floatingMenuCopy": "复制诊断信息",
+  "strata.orbit.phase.started": "已启动",
+  "strata.orbit.phase.switchOff": "开关未开启",
+  "strata.orbit.phase.notGuest": "非访客进程（Strata 主界面）"
 }
