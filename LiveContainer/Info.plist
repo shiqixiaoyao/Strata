@@ -18,6 +18,16 @@
 				<string>public.item</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Signing Certificate</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.kdt.livecontainer.p12</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>LiveContainer</string>
@@ -34,7 +44,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.15</string>
+	<string>3.8.19</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -49,7 +59,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>3.8.15</string>
+	<string>3.8.19</string>
 	<key>GCSupportedGameControllers</key>
 	<array>
 		<dict>
@@ -350,6 +360,23 @@
 			<dict>
 				<key>public.filename-extension</key>
 				<array><string>framework</string></array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+			<key>UTTypeDescription</key>
+			<string>Signing Certificate (PKCS#12)</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.p12</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>p12</string>
+					<string>pfx</string>
+					<string>pkcs12</string>
+				</array>
 			</dict>
 		</dict>
 	</array>

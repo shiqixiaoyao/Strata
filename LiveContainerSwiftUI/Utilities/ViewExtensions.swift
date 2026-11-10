@@ -11,6 +11,7 @@ import LocalAuthentication
 import SafariServices
 import Security
 import Combine
+import UIKit
 
 struct SafariView: UIViewControllerRepresentable {
     let url: Binding<URL>
@@ -74,6 +75,59 @@ extension View {
     }
 }
 
+
+// SwiftUI .alert 的 dismiss 是异步的。紧接着 present UIKit 的文档选择器或
+// 密码输入框时，present 会被静默丢弃——这正是「点了导入却没反应」的根因。
+// 统一延到下一帧、找前台 window、沿 presented 链上溯，并等正在消失的 alert 让位。
+private func strataActiveWindow(_ preferred: UIWindow?) -> UIWindow? {
+    if let preferred, !preferred.isHidden, preferred.rootViewController != nil {
+        return preferred
+    }
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    for scene in scenes where scene.activationState == .foregroundActive {
+        for window in scene.windows where !window.isHidden && window.rootViewController != nil {
+            return window
+        }
+    }
+    for scene in scenes {
+        for window in scene.windows where !window.isHidden && window.rootViewController != nil {
+            return window
+        }
+    }
+    return nil
+}
+
+private func strataPresentSafely(_ controller: UIViewController,
+                                 window preferred: UIWindow?, attempt: Int = 0) {
+    DispatchQueue.main.async {
+        guard let window = strataActiveWindow(preferred),
+              let root = window.rootViewController else { return }
+        var host: UIViewController = root
+        var blocking: UIViewController? = nil
+        while let presented = host.presentedViewController {
+            if presented.isBeingDismissed || presented is UIAlertController {
+                blocking = presented
+                break
+            }
+            host = presented
+        }
+        if let blocking {
+            if attempt < 10 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    strataPresentSafely(controller, window: window, attempt: attempt + 1)
+                }
+            } else {
+                blocking.dismiss(animated: false) {
+                    host.present(controller, animated: true)
+                }
+            }
+            return
+        }
+        guard controller.presentingViewController == nil else { return }
+        host.present(controller, animated: true)
+    }
+}
+
 public struct DocModifier: ViewModifier {
     @EnvironmentObject var sceneDelegate: SceneDelegate
     @State private var docController: UIDocumentPickerViewController?
@@ -102,11 +156,7 @@ public struct DocModifier: ViewModifier {
                 controller.allowsMultipleSelection = multiple
                 controller.delegate = delegate
                 self.docController = controller
-                // Strata: 若当前已有 sheet / 弹窗，直接 rootViewController.present 会静默
-                // 失败，表现为点「导入模块」没反应。改从最顶层已呈现的控制器 present。
-                var host = sceneDelegate.window?.rootViewController
-                while let presented = host?.presentedViewController { host = presented }
-                host?.present(controller, animated: true)
+                strataPresentSafely(controller, window: sceneDelegate.window)
             } else if !isPresented, let docController = docController {
                 docController.dismiss(animated: true)
                 self.docController = nil
@@ -156,7 +206,7 @@ public struct TextFieldAlertModifier: ViewModifier {
             if isPresented, alertController == nil {
                 let alertController = makeAlertController()
                 self.alertController = alertController
-                sceneDelegate.window?.rootViewController?.present(alertController, animated: true)
+                strataPresentSafely(alertController, window: sceneDelegate.window)
             } else if !isPresented, let alertController = alertController {
                 alertController.dismiss(animated: true)
                 self.alertController = nil

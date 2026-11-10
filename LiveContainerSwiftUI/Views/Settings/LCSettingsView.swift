@@ -47,6 +47,8 @@ struct LCSettingsView: View {
     @StateObject private var certificateRemoveAlert = YesNoHelper()
     @StateObject private var certificateImportFileAlert = AlertHelper<URL>()
     @StateObject private var certificateImportPasswordAlert = InputHelper()
+    // onAppear / onChange 可能投递同一个文件 URL 两次，避免重复弹密码框。
+    @State private var lastHandledCertificatePath: String? = nil
     
     @AppStorage("LCFrameShortcutIcons") var frameShortIcon = false
     @AppStorage("LCSwitchAppWithoutAsking") var silentSwitchApp = false
@@ -438,8 +440,8 @@ struct LCSettingsView: View {
             } message: {
                 Text("lc.settings.importCertFromBuiltinSideStoreDesc".loc)
             }
-            .betterFileImporter(isPresented: $certificateImportFileAlert.show, types: [.p12], multiple: false, callback: { fileUrls in
-                certificateImportFileAlert.close(result: fileUrls[0])
+            .betterFileImporter(isPresented: $certificateImportFileAlert.show, types: [.p12, .pfx, .pkcs12, .item], multiple: false, callback: { fileUrls in
+                certificateImportFileAlert.close(result: fileUrls.first)
             }, onDismiss: {
                 certificateImportFileAlert.close(result: nil)
             })
@@ -564,36 +566,59 @@ struct LCSettingsView: View {
     }
     
     func importCertificate() async {
-        guard let doImport = await certificateImportAlert.open(), doImport else {
+        guard let doImport = await certificateImportAlert.open(), doImport else { return }
+        guard let certificateURL = await certificateImportFileAlert.open() else { return }
+        await importCertificateFile(certificateURL)
+    }
+
+    /// 导入 .p12 / .pfx / .pkcs12。三处关键修复：安全作用域访问、空密码自动回退、
+    /// 以及导入成功后写入 LCAppGroupID（否则访客 App 读不到证书）。
+    func importCertificateFile(_ certificateURL: URL) async {
+        let ext = certificateURL.pathExtension.lowercased()
+        guard ["p12", "pfx", "pkcs12"].contains(ext) else {
+            errorInfo = LCStr("strata.cert.unsupportedType",
+                              "只能导入 .p12、.pfx 或 .pkcs12 证书文件：%@",
+                              certificateURL.lastPathComponent)
+            errorShow = true
             return
         }
-        guard let certificateURL = await certificateImportFileAlert.open() else {
-            return
-        }
-        guard let certificatePassword = await certificateImportPasswordAlert.open() else {
-            return
-        }
-        let certificateData : Data
+
+        guard let certificatePassword = await certificateImportPasswordAlert.open() else { return }
+
+        let needsScope = certificateURL.startAccessingSecurityScopedResource()
+        let certificateData: Data
         do {
             certificateData = try Data(contentsOf: certificateURL)
         } catch {
+            if needsScope { certificateURL.stopAccessingSecurityScopedResource() }
             errorInfo = error.localizedDescription
             errorShow = true
             return
         }
-        
-        guard let _ = LCUtils.getCertTeamId(withKeyData: certificateData, password: certificatePassword) else {
+        if needsScope { certificateURL.stopAccessingSecurityScopedResource() }
+
+        // 安装器导出的 PKCS#12 经常是空密码；用户填了密码时也再试一次空密码。
+        var passwords: [String] = []
+        if !certificatePassword.isEmpty { passwords.append(certificatePassword) }
+        if !passwords.contains("") { passwords.append("") }
+
+        var matchedPassword: String? = nil
+        for candidate in passwords {
+            if LCUtils.getCertTeamId(withKeyData: certificateData, password: candidate) != nil {
+                matchedPassword = candidate
+                break
+            }
+        }
+        guard let matchedPassword else {
             errorInfo = "lc.settings.invalidCertError".loc
             errorShow = true
             return
         }
 
-        LCUtils.appGroupUserDefault.set(certificateData, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(certificatePassword, forKey: "LCCertificatePassword")
-        LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
-        certificateDataFound = true
-
+        onSideStoreCertificateCallback(certificateData: certificateData, password: matchedPassword)
         UserDefaults.standard.set(LCSharedUtils.appGroupID(), forKey: "LCAppGroupID")
+        successInfo = LCStr("strata.cert.imported", "证书已导入，可在「JIT-Less 诊断」中验证。")
+        successShow = true
     }
     
     func importCertificateFromSideStore() async {
@@ -714,17 +739,30 @@ struct LCSettingsView: View {
     }
     
     func handleURL(url: URL) {
-        if url.host == "certificate" {
-            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
-                guard let encodedCert = queryItems["cert"]?.removingPercentEncoding,
-                      let password = queryItems["password"],
-                      let certData = Data(base64Encoded: encodedCert)
-                else { return }
-                
-                onSideStoreCertificateCallback(certificateData: certData, password: password)
-                
-            }
+        // 从「文件」App 用 Strata 打开证书：直接进导入流程。
+        if url.isFileURL {
+            let ext = url.pathExtension.lowercased()
+            guard ["p12", "pfx", "pkcs12"].contains(ext) else { return }
+            let path = url.path
+            if lastHandledCertificatePath == path { return }
+            lastHandledCertificatePath = path
+            Task { await importCertificateFile(url) }
+            return
         }
+        guard url.host?.lowercased() == "certificate",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let queryItems = components.queryItems?.reduce(into: [String: String]()) {
+            $0[$1.name.lowercased()] = $1.value
+        } ?? [:]
+        // 兼容 cert= 与 data=；password 缺省按空密码处理；'+' 可能被 form decode 成空格。
+        guard let raw = queryItems["cert"] ?? queryItems["data"],
+              let encoded = raw.removingPercentEncoding,
+              let certData = Data(base64Encoded: encoded.replacingOccurrences(of: " ", with: "+"))
+        else { return }
+        let password = queryItems["password"] ?? ""
+        onSideStoreCertificateCallback(certificateData: certData, password: password)
+        UserDefaults.standard.set(LCSharedUtils.appGroupID(), forKey: "LCAppGroupID")
+        successInfo = LCStr("strata.cert.imported", "证书已导入，可在「JIT-Less 诊断」中验证。")
+        successShow = true
     }
 }

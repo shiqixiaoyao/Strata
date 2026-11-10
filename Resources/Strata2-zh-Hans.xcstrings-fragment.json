@@ -993,5 +993,10 @@
   "Invalid Configuration": "配置无效",
   "Resolved Address": "已解析地址",
   "Leave empty to automatically discover SideJITServer on your local network via Bonjour.": "留空以通过 Bonjour 自动发现本地网络中的 SideJITServer。",
-  "strata.tweak.unsupportedType": "只能导入 .dylib 或 .framework 文件：%@"
+  "strata.tweak.unsupportedType": "只能导入 .dylib 或 .framework 文件：%@",
+  "strata.cert.unsupportedType": "只能导入 .p12、.pfx 或 .pkcs12 证书文件：%@",
+  "strata.cert.imported": "证书已导入，可在「JIT-Less 诊断」中验证。",
+  "strata.cert.hint": "可从「文件」App 直接打开证书，或在下方选择 .p12 文件；密码留空即可导入空密码证书。",
+  "strata.tweak.imported": "模块已导入，可在列表中启用。",
+  "lc.appSettings.helperProcessesSupport": "启用应用辅助进程"
 }

@@ -91,7 +91,9 @@ struct LCTabView: View {
     func dispatchURL(url: URL) {
         repeat {
             if url.isFileURL {
-                sharedModel.selectedTab = .apps
+                // 证书文件属于设置页，其他文件（IPA / dylib / framework）属于 App 页。
+                let ext = url.pathExtension.lowercased()
+                sharedModel.selectedTab = ["p12", "pfx", "pkcs12"].contains(ext) ? .settings : .apps
                 break
             }
             if url.scheme?.lowercased() == "sidestore" {

@@ -145,6 +145,10 @@ struct LCAppSettingsView: View {
             
             Section {
                 Text("Launch in Game Mode declares support and requests a fullscreen launch. iOS controls activation; check Game Overlay in Control Center. This does not grant extra RAM.").font(.footnote).foregroundStyle(.secondary)
+                Toggle(isOn: $model.uiHelperProcessesSupport) {
+                    Text("lc.appSettings.helperProcessesSupport".loc)
+                }
+                .disabled(model.uiIs32bit)
                 Toggle(isOn: $model.uiIsJITNeeded) {
                     Text("lc.appSettings.launchWithJit".loc)
                 }
@@ -211,14 +215,12 @@ struct LCAppSettingsView: View {
                     }
                 }
             } footer: {
-
                     if #available(iOS 26.0, *), model.uiIsJITNeeded {
                         Text("lc.appSettings.launchWithJitDesc".loc + "\n" + "lc.appSettings.jit26.scriptDesc".loc)
 
                     } else {
                         Text("lc.appSettings.launchWithJitDesc".loc)
                     }
-                
             }
 
             Section {

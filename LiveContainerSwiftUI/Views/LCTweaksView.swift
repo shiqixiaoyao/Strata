@@ -391,7 +391,19 @@ struct LCTweakFolderView : View {
                         index += 1
                     }
                 }
-                try fm.moveItem(at: fileUrl, to: toPath)
+                // 从「文件」App / 分享入口进来的 URL 是只读的安全作用域资源，
+                // moveItem 会失败；改为先取得访问权再 copyItem。
+                let needsScope = fileUrl.startAccessingSecurityScopedResource()
+                do {
+                    if fm.fileExists(atPath: toPath.path) {
+                        try fm.removeItem(at: toPath)
+                    }
+                    try fm.copyItem(at: fileUrl, to: toPath)
+                } catch {
+                    if needsScope { fileUrl.stopAccessingSecurityScopedResource() }
+                    throw error
+                }
+                if needsScope { fileUrl.stopAccessingSecurityScopedResource() }
                 LCParseMachO((toPath.path as NSString).utf8String, false) { path, header, _, _ in
                     LCPatchAddRPath(path, header);
                 }

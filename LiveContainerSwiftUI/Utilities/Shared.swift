@@ -189,12 +189,17 @@ extension String: @retroactive LocalizedError {
 }
 
 extension UTType {
-    static let ipa = UTType(filenameExtension: "ipa")!
-    static let tipa = UTType(filenameExtension: "tipa")!
-    static let dylib = UTType(filenameExtension: "dylib")!
-    static let deb = UTType(filenameExtension: "deb")!
-    static let lcFramework = UTType(filenameExtension: "framework", conformingTo: .package)!
-    static let p12 = UTType(filenameExtension: "p12")!
+    // 强制解包在 UTI 尚未注册的 iOS 版本上会直接崩溃，表现成「导入按钮没反应」。
+    // 全部改成安全兜底；证书类型由 Info.plist 的自定义 UTI 提供。
+    static let ipa = UTType(filenameExtension: "ipa") ?? .data
+    static let tipa = UTType(filenameExtension: "tipa") ?? .data
+    static let dylib = UTType(filenameExtension: "dylib") ?? .data
+    static let deb = UTType(filenameExtension: "deb") ?? .data
+    static let lcFramework = UTType(filenameExtension: "framework", conformingTo: .package)
+        ?? UTType(filenameExtension: "framework") ?? .package
+    static let p12 = UTType(filenameExtension: "p12") ?? .data
+    static let pfx = UTType(filenameExtension: "pfx") ?? .data
+    static let pkcs12 = UTType(filenameExtension: "pkcs12") ?? .data
 }
 
 extension Color {
