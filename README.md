@@ -29,7 +29,7 @@ Get **Strata-2.0+SideStore.ipa** from [Releases](https://github.com/huzaifahshah
 
 Strata 2.0 is the product release name; this build uses the LiveContainer **3.8.11** base and development revision **25**. The underlying bundle version/identity are retained for update compatibility. The IPA does not contain personal signing credentials or pairing records.
 
-## Chinese build (v11 → v12)
+## Chinese build (v11 → v13)
 
 The `zh-hans` branch ships a fully localized Simplified Chinese UI and README. v11 does two things on top of the rolled-back v7 baseline:
 
@@ -56,6 +56,17 @@ The bundled Orbit / LCFloatingMenu is bumped to upstream **1.0.36** (8pt larger 
 - Cleanup: removed the unused `LCOrbitHost.isSupportedGuest` (its logic contradicted LiveProcess guests), removed `GuestInfo()` and a redundant `objc/message` import, and merged the duplicated host/guest/SideStore checks in `installIfPossible` into the single gate in `LCOrbitCore`.
 
 The bundle version is **3.8.20**, and **1337** Chinese strings are shipped.
+
+### v13: landscape-right misalignment and black bars fixed
+
+The plugin shipped a global "orientation enforcement" layer; it is removed entirely, leaving only "keep screen awake":
+
+- **No more window frame / bounds rewriting.** On every `layoutSubviews` and orientation change it forced every window to `(0,0,landscape width,landscape height)`. Since iOS 13 window geometry is owned by `UIWindowScene`, so hard-setting the frame desynchronises the window from the scene coordinate space - in landscape right the content is pushed to one side and a black bar appears on the other.
+- **No more global replacement of `supportedInterfaceOrientations` / `__supportedInterfaceOrientations`.** It fought LiveContainer's own per-app orientation lock in `TweakLoader/UIKit+GuestHooks` for the same selector, breaking the lock and force-rotating portrait-only apps into a broken layout.
+- **Orientation is declared by the system and the guest app again:** landscape-capable apps rotate normally, portrait-locked apps stay portrait, and `App settings -> Orientation lock` works again.
+- The "left landscape adapt" and "ban right landscape" switches in the floating-menu settings are gone (they only patched the layer above); "Keep screen awake" stays.
+
+The bundle version is **3.8.21**, and **1337** Chinese strings are shipped.
 
 
 ## JIT and RAM setup

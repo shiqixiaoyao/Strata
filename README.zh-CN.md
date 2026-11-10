@@ -29,7 +29,7 @@
 
 Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与开发修订版 **25**。底层的包版本/标识保持不变，以兼容后续更新。IPA 中不包含个人签名凭据或配对记录。
 
-## 汉化构建（v11 → v12）
+## 汉化构建（v11 → v13）
 
 `zh-hans` 分支提供完整简体中文界面与中文 README。v11 在回退后的 v7 基础上做了两件事：
 
@@ -56,6 +56,17 @@ Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与�
 - 顺带清理：删除未使用的 `LCOrbitHost.isSupportedGuest`（其逻辑与 LiveProcess 访客冲突）、删除 `GuestInfo()` 与 `objc/message` 冗余引用，`installIfPossible` 与启动门控重复的宿主/访客/SideStore 判断合并为一处。
 
 包版本提升到 **3.8.20**，中文文案共 **1337 条**。
+
+### v13：修复右横屏错位 / 黑边，方向交还给系统
+
+插件自带的「方向强制」层是根因，这次整层移除，只保留「保持屏幕常亮」：
+
+- **不再改写 window 的 frame / bounds。** 原实现会在每次 `layoutSubviews` 和方向变化时把所有窗口硬设成 `(0,0,横屏宽,横屏高)`；iOS 13 之后窗口几何由 `UIWindowScene` 管理，硬改会让窗口与场景坐标系错位——右横屏时整块内容被推到一边、另一侧留黑边。
+- **不再全局替换 `supportedInterfaceOrientations` / `__supportedInterfaceOrientations`。** 它和 LiveContainer 自己的每应用「方向锁」（`TweakLoader/UIKit+GuestHooks`）抢同一个方法，导致方向锁失效、只支持竖屏的 App 被强行旋转后布局错乱。
+- **方向重新由系统与访客 App 自己声明**：支持横屏的 App 正常转，锁定竖屏的 App 保持竖屏，`App 设置 → 方向锁` 恢复生效。
+- 悬浮菜单设置里的「左横屏自适应」「锁定禁右横屏」两个开关随之移除（它们只是给上面的强制层打补丁），「保持屏幕常亮」保留。
+
+包版本提升到 **3.8.21**，中文文案共 **1337 条**。
 
 
 ## JIT 与运存配置
