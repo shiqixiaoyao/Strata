@@ -573,7 +573,7 @@ class LCAppModel: ObservableObject, Hashable {
         toAppInfo.doUseLCBundleId = fromApp.appInfo.doUseLCBundleId
         toAppInfo.fixFilePickerNew = fromApp.appInfo.fixFilePickerNew
         toAppInfo.fixLocalNotification = fromApp.appInfo.fixLocalNotification
-        toAppInfo.fixBackgroundTaskIdentifiers = fromApp.appInfo.fixBackgroundTaskIdentifiers
+        // Strata v7 has no LCAppInfo.fixBackgroundTaskIdentifiers (added upstream after the fork).
         
         toAppInfo.isJITNeeded = fromApp.appInfo.isJITNeeded
         toAppInfo.jitLaunchScriptJs = fromApp.appInfo.jitLaunchScriptJs
