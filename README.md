@@ -29,6 +29,22 @@ Get **Strata-2.0+SideStore.ipa** from [Releases](https://github.com/huzaifahshah
 
 Strata 2.0 is the product release name; this build uses the LiveContainer **3.8.11** base and development revision **25**. The underlying bundle version/identity are retained for update compatibility. The IPA does not contain personal signing credentials or pairing records.
 
+## Chinese build (v11)
+
+The `zh-hans` branch ships a fully localized Simplified Chinese UI and README. v11 does two things on top of the rolled-back v7 baseline:
+
+**Merges the LiveContainer upstream update of 2026-11-08 (`9d6ea09b05`)**: built-in JIT enablers / RAM donors / helper processes and guest app extension support (`NSExtension+GuestHooks.m`, `LCPrepareGuestExtension`, `patchGuestExtensions`), the `LCAppModel.copy(fromApp:toAppInfo:)` refactor, and a new "Helper Process Support" toggle in per-app settings. The merge is three-way, so all Strata LiveBoard and Game Mode customizations are preserved; the upstream reference to `fixBackgroundTaskIdentifiers` was removed because v7 has no such property.
+
+**Fixes certificate and tweak-module import**:
+
+- Declares the `com.kdt.livecontainer.p12` UTI (`p12` / `pfx` / `pkcs12`) and a Signing Certificate document type. Certificates can be opened with Strata straight from Files, and file URLs route to Settings.
+- Certificate import now uses security-scoped access, automatically retries with an empty password, accepts both `cert=` and `data=` deep-link parameters, and writes `LCAppGroupID` on success.
+- Tweak import uses `copyItem` with security-scoped access instead of `moveItem`, so read-only sources from Files / share sheets work.
+- `strataPresentSafely` works around the SwiftUI `.alert` dismissal race, so the document picker and password prompt no longer fail silently; all `UTType` force unwraps were removed.
+
+The bundle version is **3.8.19**, higher than every previous build, so it can be installed over the top without uninstalling. This build contains **no SideInstaller**; the built-in store entry remains the original SideStore. **1332** Chinese strings are shipped.
+
+
 ## JIT and RAM setup
 
 Import your own pairing record on the device, keep your working LocalDevVPN configuration, enable Developer Mode, and use JIT → Prepare device. Launch with JIT uses the existing guest runtime and a headless StikJIT helper. Script compatibility varies: Universal is selected automatically only for verified IDs; custom imports and per-app overrides remain available.

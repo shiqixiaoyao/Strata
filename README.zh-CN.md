@@ -29,6 +29,22 @@
 
 Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与开发修订版 **25**。底层的包版本/标识保持不变，以兼容后续更新。IPA 中不包含个人签名凭据或配对记录。
 
+## 汉化构建（v11）
+
+`zh-hans` 分支提供完整简体中文界面与中文 README。v11 在回退后的 v7 基础上做了两件事：
+
+**合并 LiveContainer 上游 2026-11-08 更新（`9d6ea09b05`）**：内置 JIT enabler / 运存 donor / 辅助进程与访客 App Extension 支持（`NSExtension+GuestHooks.m`、`LCPrepareGuestExtension`、`patchGuestExtensions`）、`LCAppModel.copy(fromApp:toAppInfo:)` 重构，以及 App 设置里新增的「启用应用辅助进程」开关。采用三方合并，Strata 的 LiveBoard 与游戏模式定制全部保留；上游 `copy` 里对 `fixBackgroundTaskIdentifiers` 的引用因 v7 不存在该属性已剔除。
+
+**修复证书与模块导入**：
+
+- 声明 `com.kdt.livecontainer.p12` UTI（`p12` / `pfx` / `pkcs12`）与 Signing Certificate 文档类型，可从「文件」App 直接用 Strata 打开证书，文件 URL 会路由到设置页。
+- 证书导入支持安全作用域访问、空密码自动回退、`cert=` / `data=` 两种深链参数，成功后写入 `LCAppGroupID` 并给出提示。
+- 模块导入用 `copyItem` + 安全作用域访问替代 `moveItem`，兼容从「文件」App / 分享入口进入的只读源。
+- 新增 `strataPresentSafely`，绕开 SwiftUI `.alert` 关闭竞态，文档选择器与密码框不再静默失败；移除所有 `UTType` 强制解包。
+
+包版本提升到 **3.8.19**，高于此前所有构建，可直接覆盖安装而无需卸载。此构建**不含 SideInstaller**；内置商店入口仍为原来的 SideStore。中文文案共 **1332 条**。
+
+
 ## JIT 与运存配置
 
 在设备上导入你自己的配对记录，保留可用的 LocalDevVPN 配置，开启开发者模式，然后使用“JIT → 准备设备”。“带JIT启动”会复用现有的访客运行时与无头的 StikJIT 辅助程序。脚本兼容性因 App 而异：只有已验证的 ID 才会自动选用“通用”脚本；自定义导入与按 App 覆盖依然可用。
