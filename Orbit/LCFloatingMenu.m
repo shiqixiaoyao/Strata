@@ -12,7 +12,6 @@
 #import "LCOrbitOverlayManager.h"
 #import "LCOrbitGuestService.h"
 #import "LCOrbitMultitask.h"
-#import "LCCornerFanMenu.h"
 #import "LCOrbitHostSettings.h"
 #import "LCOrbitPluginUpdater.h"
 #import "LCOrbitTweakAudit.h"
@@ -2313,10 +2312,6 @@ static void FMPopItems(NSArray<NSDictionary *> *items,NSArray<UIView *> *divider
     [button addGestureRecognizer:pan];
     [self.overlayView addSubview:button];
     self.orb=button;
-    // 启用角落扇形菜单后，悬浮球让位；需要保留时把 LCCornerFanKeepOrb 打开。
-    if([LCCornerFanMenu isEnabled] && ![LCCornerFanMenu keepsOrb]) {
-        button.hidden=YES;button.alpha=0;
-    }
     [self applyOrbUpdateIndicator];
 }
 - (void)hold:(UILongPressGestureRecognizer *)gesture {

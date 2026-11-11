@@ -28,7 +28,6 @@
 		1708BEEF0000000000001201 /* LCOrbitTweakCenterViews.m in Sources */ = {isa = PBXBuildFile; fileRef = 1708BEEF0000000000001202 /* LCOrbitTweakCenterViews.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		1708BEEF0000000000001301 /* LCOrbitTweakSync.m in Sources */ = {isa = PBXBuildFile; fileRef = 1708BEEF0000000000001302 /* LCOrbitTweakSync.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		1708BEEF0000000000001401 /* LCOrbitUpdateRelease.m in Sources */ = {isa = PBXBuildFile; fileRef = 1708BEEF0000000000001402 /* LCOrbitUpdateRelease.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
-		1708BEEF0000000000001501 /* LCCornerFanMenu.m in Sources */ = {isa = PBXBuildFile; fileRef = 1708BEEF0000000000001502 /* LCCornerFanMenu.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		A22000000000000000000001 /* StrataGuestControls.m in Sources */ = {isa = PBXBuildFile; fileRef = A22000000000000000000002 /* StrataGuestControls.m */; };
 		A23000000000000000000001 /* StrataGuestTextTranslation.m in Sources */ = {isa = PBXBuildFile; fileRef = A23000000000000000000002 /* StrataGuestTextTranslation.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		A20000000000000000000001 /* StrataProcessMemory.m in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* StrataProcessMemory.m */; };
@@ -205,7 +204,6 @@
 		1708BEEF0000000000001202 /* LCOrbitTweakCenterViews.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LCOrbitTweakCenterViews.m; sourceTree = "<group>"; };
 		1708BEEF0000000000001302 /* LCOrbitTweakSync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LCOrbitTweakSync.m; sourceTree = "<group>"; };
 		1708BEEF0000000000001402 /* LCOrbitUpdateRelease.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LCOrbitUpdateRelease.m; sourceTree = "<group>"; };
-		1708BEEF0000000000001502 /* LCCornerFanMenu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LCCornerFanMenu.m; sourceTree = "<group>"; };
 		A22000000000000000000002 /* StrataGuestControls.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StrataGuestControls.m; sourceTree = "<group>"; };
 		A23000000000000000000002 /* StrataGuestTextTranslation.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StrataGuestTextTranslation.m; sourceTree = "<group>"; };
 		A20000000000000000000002 /* StrataProcessMemory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StrataProcessMemory.m; sourceTree = "<group>"; };
@@ -571,7 +569,6 @@
 		1708BEEF0000000000001202 /* LCOrbitTweakCenterViews.m */,
 		1708BEEF0000000000001302 /* LCOrbitTweakSync.m */,
 		1708BEEF0000000000001402 /* LCOrbitUpdateRelease.m */,
-		1708BEEF0000000000001502 /* LCCornerFanMenu.m */,
 			);
 			path = Orbit;
 			sourceTree = "<group>";
@@ -1083,7 +1080,6 @@
 				1708BEEF0000000000001201 /* LCOrbitTweakCenterViews.m in Sources */,
 				1708BEEF0000000000001301 /* LCOrbitTweakSync.m in Sources */,
 				1708BEEF0000000000001401 /* LCOrbitUpdateRelease.m in Sources */,
-				1708BEEF0000000000001501 /* LCCornerFanMenu.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -19,8 +19,6 @@ struct LCMultitaskSettingView: View {
     @AppStorage("LCDockWidth", store: LCUtils.appGroupUserDefault) var dockWidth: Double = 80
     @AppStorage("LCHideCollapsedDock", store: LCUtils.appGroupUserDefault) var hideCollapsedDock: Bool = false
     @AppStorage("LCRedirectURLToHost", store: LCUtils.appGroupUserDefault) var redirectURLToHost = false
-    @AppStorage("LCCornerFanEnabled", store: LCUtils.appGroupUserDefault) var cornerFanEnabled = false
-    @AppStorage("LCDesktopWindows", store: LCUtils.appGroupUserDefault) var desktopWindows = false
     
     var body: some View {
         List {
@@ -67,19 +65,6 @@ struct LCMultitaskSettingView: View {
                 }
             }
             
-            Section {
-                Toggle(isOn: $cornerFanEnabled) {
-                    Text("lc.settings.cornerFan".loc)
-                }
-                Toggle(isOn: $desktopWindows) {
-                    Text("lc.settings.desktopWindows".loc)
-                }
-            } header: {
-                Text("lc.settings.strataInteraction".loc)
-            } footer: {
-                Text("lc.settings.strataInteraction.footer".loc)
-            }
-
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
