@@ -373,9 +373,9 @@ class LCAppModel: ObservableObject, Hashable {
         jitNeeded = false
 #endif
         if jitNeeded && hostJIT {
-            guard let relative = appInfo.relativeBundlePath, let folder = uiSelectedContainer?.folderName else { throw "HostJIT needs a registered guest and data container." }
+            guard let relative = appInfo.relativeBundlePath, let folder = uiSelectedContainer?.folderName else { throw "HostJIT needs a registered guest and data container.".loc }
             let hostPairingURL = await LiveBoardBuiltInJIT.pairingURL
-            guard FileManager.default.fileExists(atPath: hostPairingURL.path) else { throw "Import a pairing file and prepare the device before testing HostJIT." }
+            guard FileManager.default.fileExists(atPath: hostPairingURL.path) else { throw "Import a pairing file and prepare the device before testing HostJIT.".loc }
             UserDefaults.standard.set(["app": relative, "container": folder, "created": Date().timeIntervalSince1970, "script": resolvedJITScript ?? LCUtils.base64EncodedUniversalJITScript()], forKey: "StrataHostJITRequest")
             LCSharedUtils.launchToGuestApp(withClassicMode: classicMode)
         } else if jitNeeded {

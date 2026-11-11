@@ -127,7 +127,7 @@ struct LCDataManagementView : View {
         }
         .alert("lc.common.success".loc, isPresented: $successShow){
         } message: {
-            Text(successInfo)
+            Text(successInfo.loc)
         }
         .alert("lc.settings.cleanDataFolder".loc, isPresented: $appFolderRemovalAlert.show) {
             if folderRemoveCount > 0 {

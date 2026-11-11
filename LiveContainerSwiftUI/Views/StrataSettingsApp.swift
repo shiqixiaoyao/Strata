@@ -129,10 +129,10 @@ struct StrataSettingsApp: View {
             Toggle(isOn: $sounds) { row("Navigation sounds", symbol: "speaker.wave.2.fill", tint: .pink) }
             link("switcher")
         }
-        Section("Apps") {
+        Section {
             actionRow("Manage Apps", symbol: "square.stack.3d.up", tint: .blue, id: "settings.manage") { openManagement() }
             link("iphone"); link("extensions"); link("sources"); link("tweaks")
-        }
+        } header: { Text(LCStr("strata.settings.section.apps", "Apps")) }
         Section {
             Toggle(isOn: $seamlessSwitching) { row("Seamless app switching", symbol: "rectangle.stack.fill", tint: .indigo) }
         } header: { Text("Multitasking") } footer: { Text("Each app runs in its own process, full screen. Switching returns to it where you left it instead of restarting it. Turn off for apps that misbehave; HostJIT, Classic Mode and Request Game Mode always run inside Strata.") }
@@ -145,7 +145,7 @@ struct StrataSettingsApp: View {
             Toggle(isOn: Binding(get: { memoryOverlay }, set: { memoryOverlay = $0; StrataMemoryOverlay.shared.apply() })) { row("Memory overlay", symbol: "gauge.with.needle", tint: .green) }
             link("framegen"); link("storage")
         } header: { Text("Performance") } footer: { Text("The overlay shows memory used and the limit for Strata, each app and each helper (RAM donor) process, with peaks.") }
-        Section("System") { link("runtime"); link("refresh"); link("identity"); link("advanced") }
+        Section { link("runtime"); link("refresh"); link("identity"); link("advanced") } header: { Text(LCStr("strata.settings.section.system", "System")) }
         Section("About") {
             link("about")
             valueRow("Version", StrataVersion.full)
@@ -154,7 +154,7 @@ struct StrataSettingsApp: View {
     }
 
     @ViewBuilder private func destination(_ id: String) -> some View {
-        if let entry = entries.first(where: { $0.id == id }) { entry.destination().navigationTitle(entry.title) }
+        if let entry = entries.first(where: { $0.id == id }) { entry.destination().navigationTitle(entry.title.loc) }
     }
     private func open(_ id: String) { path.append(id) }
 
@@ -167,7 +167,7 @@ struct StrataSettingsApp: View {
             if #available(iOS 16.0, *) {
                 actionRow(entry.title, symbol: entry.symbol, tint: entry.tint, id: "settings.row." + id, chevron: true) { open(id) }
             } else {
-                NavigationLink { entry.destination().navigationTitle(entry.title) } label: { row(entry.title, symbol: entry.symbol, tint: entry.tint) }
+                NavigationLink { entry.destination().navigationTitle(entry.title.loc) } label: { row(entry.title, symbol: entry.symbol, tint: entry.tint) }
                     .accessibilityIdentifier("settings.row." + id)
             }
         }
@@ -185,13 +185,13 @@ struct StrataSettingsApp: View {
         .accessibilityIdentifier(id)
     }
     private func valueRow(_ title: String, _ value: String) -> some View {
-        HStack { Text(title); Spacer(minLength: 12); Text(value).foregroundStyle(.secondary).multilineTextAlignment(.trailing) }
+        HStack { Text(title.loc); Spacer(minLength: 12); Text(value).foregroundStyle(.secondary).multilineTextAlignment(.trailing) }
     }
     private func row(_ title: String, symbol: String, tint: Color) -> some View {
         HStack(spacing: 12) {
             Image(systemName: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 29, height: 29).background(tint, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            Text(title).foregroundStyle(.primary)
+            Text(title.loc).foregroundStyle(.primary)
         }
     }
     private func tile(_ entry: Entry) -> some View {
@@ -201,7 +201,7 @@ struct StrataSettingsApp: View {
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: entry.symbol).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 36, height: 36).background(entry.tint, in: Circle())
-                Text(entry.title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.75)
+                Text(entry.title.loc).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(12)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))

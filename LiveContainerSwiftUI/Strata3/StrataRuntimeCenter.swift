@@ -71,7 +71,7 @@ struct StrataGuestDetail: View {
                     Button("Unlock guest management") {
                         Task { do { authorized = try await LCUtils.authenticateUser() } catch { authError = error.localizedDescription } }
                     }
-                    if !authError.isEmpty { Text(authError).font(.caption) }
+                    if !authError.isEmpty { Text(authError.loc).font(.caption) }
                 }.navigationTitle("Locked guest")
             }
         }
@@ -119,7 +119,7 @@ struct StrataContainerManager: View {
     var body: some View {
         List {
             if busy { ProgressView("Working…") }
-            if !status.isEmpty { Text(status).font(.footnote).accessibilityIdentifier("backup.status") }
+            if !status.isEmpty { Text(status.loc).font(.footnote).accessibilityIdentifier("backup.status") }
             Section("Files") {
                 NavigationLink("Browse guest data") { StrataGuestFiles(root: root, directory: root, containerName: container.folderName) }
                     .disabled(busy || inUse)
@@ -148,10 +148,10 @@ struct StrataContainerManager: View {
     }
     private func reload() { backups = ((try? FileManager.default.contentsOfDirectory(at: backupRoot, includingPropertiesForKeys: nil)) ?? []).filter { $0.pathExtension == "stratabackup" }.sorted { $0.lastPathComponent > $1.lastPathComponent } }
     private func createBackup() {
-        guard !inUse, !busy else { status = "Close the guest first."; return }
+        guard !inUse, !busy else { status = "Close the guest first.".loc; return }
         let source = root, id = app.bundleIdentifier
         let destination = backupRoot.appendingPathComponent("\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(6)).stratabackup")
-        guard let groupRoot = LCSharedUtils.appGroupPath() else { status = "Shared data directory unavailable."; return }
+        guard let groupRoot = LCSharedUtils.appGroupPath() else { status = "Shared data directory unavailable.".loc; return }
         let lease: StrataGuestDataLease
         do { lease = try StrataGuestDataLease(container: container.folderName, groupRoot: groupRoot) }
         catch { status = error.localizedDescription; return }
@@ -160,15 +160,15 @@ struct StrataContainerManager: View {
             defer { lease.release() }
             do {
                 try await Task.detached(priority: .userInitiated) { try StrataPortableBackup.create(root: source, bundleID: id, destination: destination) }.value
-                status = "Backup created and verified while copying."
+                status = "Backup created and verified while copying.".loc
             } catch { status = error.localizedDescription }
             busy = false; reload()
         }
     }
     private func restoreBackup(_ archive: URL) {
-        guard !inUse, !busy else { status = "Close the guest first."; return }
+        guard !inUse, !busy else { status = "Close the guest first.".loc; return }
         let destination = root, id = app.bundleIdentifier
-        guard let groupRoot = LCSharedUtils.appGroupPath() else { status = "Shared data directory unavailable."; return }
+        guard let groupRoot = LCSharedUtils.appGroupPath() else { status = "Shared data directory unavailable.".loc; return }
         let lease: StrataGuestDataLease
         do { lease = try StrataGuestDataLease(container: container.folderName, groupRoot: groupRoot) }
         catch { status = error.localizedDescription; return }
@@ -178,7 +178,7 @@ struct StrataContainerManager: View {
             let scoped = archive.startAccessingSecurityScopedResource(); defer { if scoped { archive.stopAccessingSecurityScopedResource() } }
             do {
                 try await Task.detached(priority: .userInitiated) { try StrataPortableBackup.restore(archive: archive, root: destination, bundleID: id) }.value
-                status = "Restored. The previous data container remains in its recovery folder."
+                status = "Restored. The previous data container remains in its recovery folder.".loc
             } catch { status = error.localizedDescription }
             busy = false; reload()
         }
@@ -207,19 +207,19 @@ struct StrataGuestFiles: View {
                     }
                 }
             }
-            if !status.isEmpty { Text(status).font(.footnote) }
+            if !status.isEmpty { Text(status.loc).font(.footnote) }
             if busy { ProgressView() }
         }
-        .navigationTitle(directory == root ? "Guest files" : directory.lastPathComponent).navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(directory == root ? "Guest files".loc : directory.lastPathComponent).navigationBarTitleDisplayMode(.inline)
         .toolbar { Button("Import file") { importing = true }.disabled(busy) }
         .onAppear { reload() }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
             do {
                 let source = try result.get()
                 let target = directory.appendingPathComponent(source.lastPathComponent)
-                guard StrataPortableBackup.safePath(source.lastPathComponent), !FileManager.default.fileExists(atPath: target.path) else { throw StrataPortableBackup.failure("A file with this name already exists. Rename it before importing.") }
+                guard StrataPortableBackup.safePath(source.lastPathComponent), !FileManager.default.fileExists(atPath: target.path) else { throw StrataPortableBackup.failure("A file with this name already exists. Rename it before importing.".loc) }
                 _ = try StrataPortableBackup.confined(directory, to: root)
-                guard let groupRoot = LCSharedUtils.appGroupPath() else { throw StrataPortableBackup.failure("Shared data directory unavailable.") }
+                guard let groupRoot = LCSharedUtils.appGroupPath() else { throw StrataPortableBackup.failure("Shared data directory unavailable.".loc) }
                 let lease = try StrataGuestDataLease(container: containerName, groupRoot: groupRoot)
                 busy = true
                 Task {
@@ -227,9 +227,9 @@ struct StrataGuestFiles: View {
                     let scoped = source.startAccessingSecurityScopedResource(); defer { if scoped { source.stopAccessingSecurityScopedResource() } }
                     do {
                         let sourceValues = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                        guard sourceValues.isRegularFile == true, sourceValues.isSymbolicLink != true else { throw StrataPortableBackup.failure("Import a regular file, not a link or directory.") }
+                        guard sourceValues.isRegularFile == true, sourceValues.isSymbolicLink != true else { throw StrataPortableBackup.failure("Import a regular file, not a link or directory.".loc) }
                         try await Task.detached(priority: .userInitiated) { try FileManager.default.copyItem(at: source, to: target) }.value
-                        status = "File imported."
+                        status = "File imported.".loc
                     } catch { status = error.localizedDescription }
                     busy = false; reload()
                 }
@@ -275,7 +275,7 @@ struct StrataDiagnosticsView: View {
                 Text("Exports current host memory, the latest saved guest memory/Metal sample and guest identifiers. Pairing files, signing identities, Apple credentials, arbitrary guest files and raw JIT logs are excluded.").font(.footnote)
                 Button("Create diagnostic report") { create() }
                 if let report { ShareLink("Export diagnostic report", item: report) }
-                if !message.isEmpty { Text(message).font(.caption) }
+                if !message.isEmpty { Text(message.loc).font(.caption) }
             }
         }.navigationTitle("Runtime Diagnostics").navigationBarTitleDisplayMode(.inline)
     }

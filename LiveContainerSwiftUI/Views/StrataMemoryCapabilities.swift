@@ -32,14 +32,14 @@ import StosSign_Anisette
     func signIn(server: String, signingTeam: String, hostID: String, guestID: String) {
         guard !busy else { return }
         guard let url = URL(string: server), url.scheme == "https", url.host != nil, url.user == nil, url.password == nil else {
-            status = "Enter the HTTPS anisette server you use with SideStore."; return
+            status = "Enter the HTTPS anisette server you use with SideStore.".loc; return
         }
         guard !appleID.isEmpty, !password.isEmpty, !signingTeam.isEmpty, !hostID.isEmpty, !guestID.isEmpty else {
-            status = "Enter your signing Apple ID and password. This installation must have a valid signing team."; return
+            status = "Enter your signing Apple ID and password. This installation must have a valid signing team.".loc; return
         }
         expectedHost = hostID; expectedGuest = guestID
         registrations = []; selectedHost = ""; selectedGuest = ""
-        busy = true; status = "Connecting…"
+        busy = true; status = "Connecting…".loc
         let operation = UUID(); generation = operation
         let manager = AnisetteManager(); anisette = manager
         let email = appleID, secret = password
@@ -71,9 +71,9 @@ import StosSign_Anisette
                 if selectedHost.isEmpty { missing.append("Strata: " + hostID) }
                 if selectedGuest.isEmpty { missing.append("Guest process: " + guestID) }
                 if registered.isEmpty {
-                    status = "Apple returned no registered App IDs for this signing team. Check SideStore's Apple ID and team. Refreshing cannot fix an account mismatch."
+                    status = "Apple returned no registered App IDs for this signing team. Check SideStore's Apple ID and team. Refreshing cannot fix an account mismatch.".loc
                 } else if missing.isEmpty {
-                    status = "Matching registrations found. Review both selections before applying."
+                    status = "Matching registrations found. Review both selections before applying.".loc
                 } else {
                     status = "No exact registration matched: " + missing.joined(separator: "; ") + ". Select the corresponding IDs shown in SideStore's App IDs list below. No capability has been changed."
                 }
@@ -91,7 +91,7 @@ import StosSign_Anisette
         guard !busy, let session, let team, let selected = registeredTargets else { return }
         let requested = registrations.filter { selected.contains($0.identifier) }
         guard requested.count == selected.count else { return }
-        busy = true; status = "Requesting capability…"
+        busy = true; status = "Requesting capability…".loc
         let operation = UUID(); generation = operation
         task = Task {
             defer { if generation == operation { busy = false; task = nil } }
@@ -103,7 +103,7 @@ import StosSign_Anisette
                     _ = try await AppleAPI.shared.updateAppID(appID, capabilities: capabilities, team: team, session: session)
                     completed += 1
                 }
-                if generation == operation { status = "Apple accepted the capability requests. Reimport and install the current Strata IPA through SideStore, keeping all extensions. A refresh alone may not retain the entitlement. Then check Installed memory permissions; this message does not confirm extra memory is active." }
+                if generation == operation { status = "Apple accepted the capability requests. Reimport and install the current Strata IPA through SideStore, keeping all extensions. A refresh alone may not retain the entitlement. Then check Installed memory permissions; this message does not confirm extra memory is active.".loc }
             } catch {
                 if generation == operation {
                     status = bypass
@@ -117,9 +117,9 @@ import StosSign_Anisette
         generation = UUID(); task?.cancel(); task = nil
         let callback = verification; verification = nil; needsCode = false; callback?(nil)
         anisette?.cancel(); anisette = nil
-        password = ""; code = ""; busy = false; status = "Cancelled."
+        password = ""; code = ""; busy = false; status = "Cancelled.".loc
     }
-    func signOut() { cancel(); session = nil; team = nil; registrations = []; selectedHost = ""; selectedGuest = ""; appleID = ""; signedIn = false; status = "Signed out." }
+    func signOut() { cancel(); session = nil; team = nil; registrations = []; selectedHost = ""; selectedGuest = ""; appleID = ""; signedIn = false; status = "Signed out.".loc }
 }
 
 struct StrataMemorySettings: View {
@@ -158,7 +158,7 @@ struct StrataMemorySettings: View {
                     if sample["footprintReported"] as? Bool == true, let bytes = sample["footprintBytes"] as? NSNumber {
                         Text("Running app memory used at sample: \(bytes.uint64Value / 1_048_576) MB")
                     }
-                    Text("Sampled: " + Date(timeIntervalSince1970: timestamp).formatted(date: .abbreviated, time: .standard)).font(.caption)
+                    Text(LCStr("strata.memory.sampled %@", "Sampled: %@", Date(timeIntervalSince1970: timestamp).formatted(date: .abbreviated, time: .standard))).font(.caption)
                     Button("Copy app memory report") {
                         if let data = try? JSONSerialization.data(withJSONObject: sample, options: [.prettyPrinted, .sortedKeys]) {
                             UIPasteboard.general.string = String(data: data, encoding: .utf8)
@@ -176,8 +176,8 @@ struct StrataMemorySettings: View {
                     SecureField("Password", text: $capability.password)
                     Button("Sign in to Apple") { capability.signIn(server: server, signingTeam: signingTeam, hostID: hostIdentity, guestID: guestIdentity) }.disabled(capability.busy)
                 } else {
-                    Text("Signed Strata ID: " + capability.expectedHost).font(.footnote).textSelection(.enabled)
-                    Text("Signed guest ID: " + capability.expectedGuest).font(.footnote).textSelection(.enabled)
+                    Text(LCStr("strata.memory.signedHost %@", "Signed Strata ID: %@", capability.expectedHost)).font(.footnote).textSelection(.enabled)
+                    Text(LCStr("strata.memory.signedGuest %@", "Signed guest ID: %@", capability.expectedGuest)).font(.footnote).textSelection(.enabled)
                     Picker("Strata registration", selection: $capability.selectedHost) {
                         Text("Choose registration").tag("")
                         ForEach(capability.registrations, id: \.identifier) { registration in
@@ -197,7 +197,7 @@ struct StrataMemorySettings: View {
                     Button("Sign out") { capability.signOut() }
                 }
                 if capability.busy { ProgressView("Working…"); Button("Cancel") { capability.cancel() } }
-                if !capability.status.isEmpty { Text(capability.status).font(.footnote).textSelection(.enabled) }
+                if !capability.status.isEmpty { Text(capability.status.loc).font(.footnote).textSelection(.enabled) }
             } header: { Text("Enable extra memory") } footer: {
                 Text("Use the same Apple ID and trusted anisette server as SideStore. Credentials stay in memory for this session. After applying, reinstall through SideStore and keep all extensions. iOS decides the memory available on your device.")
             }

@@ -191,7 +191,7 @@ struct StrataSwitchboard: View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: 20, weight: .semibold)).foregroundStyle(tint)
                 .frame(width: 50, height: 50).background(Circle().fill(Color(white: 0.27)))
-        }.accessibilityLabel(label)
+        }.accessibilityLabel(label.loc)
     }
 
     private func activate(_ app: LCAppModel) {

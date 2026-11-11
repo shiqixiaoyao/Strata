@@ -86,7 +86,7 @@ struct LCWebView: View {
                 runAppAlert.close(result: false)
             })
         } message: {
-            Text(runAppAlertMsg)
+            Text(runAppAlertMsg.loc)
         }
         .alert("lc.webView.installApp".loc, isPresented: $installAppAlert.show) {
             Button("lc.common.install".loc, action: {
@@ -96,7 +96,7 @@ struct LCWebView: View {
                 installAppAlert.close(result: false)
             })
         } message: {
-            Text(installAppAlertMsg)
+            Text(installAppAlertMsg.loc)
         }
         
         .alert("lc.common.error".loc, isPresented: $errorShow) {

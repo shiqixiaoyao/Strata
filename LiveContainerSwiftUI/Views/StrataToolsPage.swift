@@ -50,7 +50,7 @@ struct StrataToolsPage: View {
                         Spacer()
                         Button { editing.toggle(); dragged = nil } label: {
                             Image(systemName: editing ? "checkmark" : "slider.horizontal.3").frame(width: 42, height: 36)
-                        }.liveBoardGlass(radius: 18).accessibilityLabel(editing ? "Done editing tools" : "Edit tools")
+                        }.liveBoardGlass(radius: 18).accessibilityLabel((editing ? "Done editing tools" : "Edit tools").loc)
                             .accessibilityIdentifier("tools.edit")
                     }
                     }

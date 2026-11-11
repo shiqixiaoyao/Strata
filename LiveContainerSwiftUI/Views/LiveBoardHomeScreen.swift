@@ -556,10 +556,10 @@ struct LiveBoardHomeScreen: View {
         StrataToolsPage(tools: [
             .init(id: "runtimes", title: "Runtime Manager".loc, detail: "Guests · Files · Backups · Signing".loc, symbol: "shippingbox.fill", action: { runtimeSetup = true }),
             .init(id: "interface", title: "Interface".loc, detail: "iOS Home Screen".loc, symbol: "square.grid.3x3.fill", action: openInterface),
-            .init(id: "refresh", title: "Automatic refresh".loc, detail: toolsRefresh.enabled ? "Every \(toolsRefresh.days) days · SideStore" : "Schedule & refresh apps", symbol: "arrow.triangle.2.circlepath", action: { refreshSetup = true }),
+            .init(id: "refresh", title: "Automatic refresh".loc, detail: toolsRefresh.enabled ? LCStr("Every %lld days · SideStore", "Every %lld days · SideStore", toolsRefresh.days) : "Schedule & refresh apps".loc, symbol: "arrow.triangle.2.circlepath", action: { refreshSetup = true }),
             .init(id: "framegen", title: "Frame Generation".loc, detail: "2× Metal · experimental".loc, symbol: "square.3.layers.3d", action: { frameGenApp = nil; frameGenSetup = true }),
-            .init(id: "sources", title: "lc.tabView.sources".loc, detail: secondaryInstance ? "Manage in primary instance" : "Discover & install", symbol: "books.vertical", disabled: secondaryInstance, action: { openTab(.sources) }),
-            .init(id: "tweaks", title: "lc.tabView.tweaks".loc, detail: secondaryInstance ? "Manage in primary instance" : "App extensions", symbol: "wrench.and.screwdriver", disabled: secondaryInstance, action: { openTab(.tweaks) }),
+            .init(id: "sources", title: "lc.tabView.sources".loc, detail: secondaryInstance ? "Manage in primary instance".loc : "Discover & install".loc, symbol: "books.vertical", disabled: secondaryInstance, action: { openTab(.sources) }),
+            .init(id: "tweaks", title: "lc.tabView.tweaks".loc, detail: secondaryInstance ? "Manage in primary instance".loc : "App extensions".loc, symbol: "wrench.and.screwdriver", disabled: secondaryInstance, action: { openTab(.tweaks) }),
             .init(id: "wallpaper", title: "Wallpaper".loc, detail: "Customize".loc, symbol: "photo", action: { customizing = true }),
             .init(id: "apps", title: "Apps".loc, detail: "Install & manage".loc, symbol: "square.stack.3d.up", action: openManagement),
             .init(id: "settings", title: "lc.tabView.settings".loc, detail: StrataVersion.display, symbol: "gearshape.fill", action: { NotificationCenter.default.post(name: .strataOpenSettings, object: nil) }),

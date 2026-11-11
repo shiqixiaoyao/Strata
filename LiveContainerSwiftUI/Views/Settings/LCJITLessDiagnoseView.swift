@@ -335,7 +335,7 @@ struct LCJITLessDiagnoseView : View {
             }
             .alert("lc.common.success".loc, isPresented: $successShow){
             } message: {
-                Text(successInfo)
+                Text(successInfo.loc)
             }
             
         } else {

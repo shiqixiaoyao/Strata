@@ -6,15 +6,15 @@ import Darwin
 final class StrataGuestDataLease {
     private var descriptor: Int32 = -1
     init(container: String, groupRoot: URL) throws {
-        guard !container.isEmpty, container == (container as NSString).lastPathComponent, container != ".", container != ".." else { throw StrataPortableBackup.failure("Invalid guest data container.") }
+        guard !container.isEmpty, container == (container as NSString).lastPathComponent, container != ".", container != ".." else { throw StrataPortableBackup.failure("Invalid guest data container.".loc) }
         let directory = groupRoot.appendingPathComponent("Library/StrataDataLocks")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let file = directory.appendingPathComponent(container + ".lock")
         descriptor = open(file.path, O_CREAT | O_RDWR | O_NOFOLLOW, 0o600)
-        guard descriptor >= 0 else { throw StrataPortableBackup.failure("Cannot open the guest data lock.") }
+        guard descriptor >= 0 else { throw StrataPortableBackup.failure("Cannot open the guest data lock.".loc) }
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
             close(descriptor); descriptor = -1
-            throw StrataPortableBackup.failure("The guest or another data operation is using this container. Close it and retry.")
+            throw StrataPortableBackup.failure("The guest or another data operation is using this container. Close it and retry.".loc)
         }
     }
     func release() { if descriptor >= 0 { close(descriptor); descriptor = -1 } }

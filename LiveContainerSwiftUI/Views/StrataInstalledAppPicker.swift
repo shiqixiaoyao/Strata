@@ -29,7 +29,11 @@ struct StrataInstalledAppPicker: View {
             }
             if query.isEmpty { Section {
                 Text("Tap an app to add it to Strata. No Shortcut is created.").font(.footnote)
-                if importedCatalog { Text("Showing the app list exported from your Mac" + (catalogDate.map { " on " + $0.formatted(date: .abbreviated, time: .shortened) } ?? "") + ". iOS doesn't let Strata see apps installed since then: search the App Store below, or export again from your Mac.").font(.caption).foregroundStyle(.secondary) }
+                if importedCatalog {
+                    let exported = catalogDate.map { LCStr("Showing the app list exported from your Mac on %@. iOS doesn't let Strata see apps installed since then: search the App Store below, or export again from your Mac.", "Showing the app list exported from your Mac on %@. iOS doesn't let Strata see apps installed since then: search the App Store below, or export again from your Mac.", $0.formatted(date: .abbreviated, time: .shortened)) }
+                        ?? LCStr("Showing the app list exported from your Mac. iOS doesn't let Strata see apps installed since then: search the App Store below, or export again from your Mac.", "Showing the app list exported from your Mac. iOS doesn't let Strata see apps installed since then: search the App Store below, or export again from your Mac.")
+                    Text(exported).font(.caption).foregroundStyle(.secondary)
+                }
                 if loading { ProgressView("Reading installed apps…") }
                 if !loading && apps.isEmpty {
                     Text("iOS has restricted the installed-app list. Import an app list from a paired Mac to choose apps by name.").font(.footnote)
@@ -44,14 +48,14 @@ struct StrataInstalledAppPicker: View {
                         catch { self.error = error.localizedDescription }
                     } label: {
                         HStack { StrataPhoneAppIconView(bundleIdentifier: app.id); Text(app.name); Spacer(); Image(systemName: added ? "checkmark.circle.fill" : "plus.circle").foregroundStyle(added ? .green : .blue) }
-                    }.disabled(added).accessibilityValue(added ? "Added" : "Not added").accessibilityIdentifier("installedApp." + app.id)
+                    }.disabled(added).accessibilityValue((added ? "Added" : "Not added").loc).accessibilityIdentifier("installedApp." + app.id)
                 }
             }
             if !query.trimmingCharacters(in: .whitespaces).isEmpty {
                 Section {
-                    Button { Task { await searchStore() } } label: { Label(storeSearching ? "Searching…" : "Search the App Store for “\(query)”", systemImage: "magnifyingglass.circle") }
+                    Button { Task { await searchStore() } } label: { Label(storeSearching ? "Searching…".loc : LCStr("Search the App Store for “%@”", "Search the App Store for “%@”", query), systemImage: "magnifyingglass.circle") }
                         .disabled(storeSearching).accessibilityIdentifier("installedApp.storeSearch")
-                    if let storeMessage { Text(storeMessage).font(.caption).foregroundStyle(.secondary) }
+                    if let storeMessage { Text(storeMessage.loc).font(.caption).foregroundStyle(.secondary) }
                     ForEach(storeResults) { app in
                         let added = store.entries.contains { $0.bundleIdentifier == app.id }
                         Button { Task { await addStoreApp(app) } } label: {
@@ -76,7 +80,7 @@ struct StrataInstalledAppPicker: View {
             do {
                 let url = try result.get(); let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
                 let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                guard size > 0 && size <= 1_000_000 else { throw "The app list is empty or too large." }
+                guard size > 0 && size <= 1_000_000 else { throw "The app list is empty or too large.".loc }
                 let values = try Self.validated(Data(contentsOf: url))
                 try FileManager.default.createDirectory(at: catalog.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try JSONEncoder().encode(values).write(to: catalog, options: .atomic)
@@ -136,9 +140,9 @@ struct StrataInstalledAppPicker: View {
         loading = false
     }
     private static func validated(_ data: Data) throws -> [StrataInstalledPhoneApp] {
-        guard data.count <= 1_000_000 else { throw "The app list is too large." }
+        guard data.count <= 1_000_000 else { throw "The app list is too large.".loc }
         let entries = try JSONDecoder().decode([StrataInstalledPhoneApp].self, from: data)
-        guard entries.count <= 2000 else { throw "Too many app entries." }
+        guard entries.count <= 2000 else { throw "Too many app entries.".loc }
         var seen = Set<String>()
         return entries.map { var app = $0; app.schemes = app.schemes.map(StrataPhoneAppPolicy.validSchemes); return app }
             .filter { StrataPhoneAppPolicy.validBundleIdentifier($0.id) && !$0.name.isEmpty && $0.name.count <= 120 && $0.id != Bundle.main.bundleIdentifier && seen.insert($0.id).inserted }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

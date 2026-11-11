@@ -150,7 +150,7 @@ struct StrataGalleryScreen: View {
             .accessibilityAddTraits(key == selectedKey ? .isSelected : [])
             .strataReorderable(key, all: apps)
             .contextMenu {
-                ForEach(Array(actions(app, arrange: false).enumerated()), id: \.offset) { _, action in Button(action.title, systemImage: action.symbol, action: action.run) }
+                ForEach(Array(actions(app, arrange: false).enumerated()), id: \.offset) { _, action in Button(action.title.loc, systemImage: action.symbol, action: action.run) }
                 StrataArrangeMenus(app: app, visible: filtered, all: apps, categories: library.categories, current: library.assignments[key]) { value in update { $0.assignments[key] = value } }
             }
     }
@@ -319,7 +319,7 @@ struct StrataGalleryScreen: View {
     // MARK: Options panel (shared)
     private func actions(_ app: LCAppModel, arrange: Bool = true) -> [Action] {
         let key = liveBoardAppKey(app)
-        var list = [Action(title: "Play", symbol: "play.fill") { details = false; activate(app) }]
+        var list = [Action(title: LCStr("strata.action.play", "Play"), symbol: "play.fill") { details = false; activate(app) }]
         if !(app.appInfo is StrataPhoneAppInfo) && !(app.appInfo is BuiltInSideStoreAppInfo) {
             if let launchWithJIT { list.append(Action(title: "Launch with JIT", symbol: "bolt.fill") { details = false; controller.stop(); launchWithJIT(app) }) }
             if let launchInGameMode { list.append(Action(title: "Request Game Mode", symbol: "gamecontroller.fill") { details = false; controller.stop(); launchInGameMode(app) }) }
@@ -358,7 +358,7 @@ struct StrataGalleryScreen: View {
                         VStack(spacing: 4) {
                             ForEach(Array(list.enumerated()), id: \.offset) { index, action in
                                 Button(action: action.run) {
-                                    HStack(spacing: 10) { Image(systemName: action.symbol).frame(width: 24); Text(action.title); Spacer(minLength: 0) }
+                                    HStack(spacing: 10) { Image(systemName: action.symbol).frame(width: 24); Text(action.title.loc); Spacer(minLength: 0) }
                                         .padding(10).frame(minHeight: 40)
                                         .background(detailsIndex == index ? .white.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 10))
                                 }.buttonStyle(.plain).id(index)

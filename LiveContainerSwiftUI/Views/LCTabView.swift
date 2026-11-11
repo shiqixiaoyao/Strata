@@ -28,7 +28,7 @@ struct LCTabView: View {
         .alert("Refresh Strata", isPresented: $refreshReminder.showReminder) {
             Button("Refresh") { refreshReminder.launchRefreshShortcut() }
             Button("Later", role: .cancel) { refreshReminder.snooze() }
-        } message: { Text(refreshReminder.reminderMessage) }
+        } message: { Text(refreshReminder.reminderMessage.loc) }
         .sheet(isPresented: $refreshSetup) { NavigationView { StrataAutoRefreshSettings().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { refreshSetup = false } } } } }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("StrataOpenRefreshSetup"))) { _ in DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { refreshSetup = true } }
         .downloadAlert(helper: downloadHelper)

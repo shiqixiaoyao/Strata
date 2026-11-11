@@ -38,7 +38,7 @@ struct StrataExtensionsView: View {
                               let data = try? Data(contentsOf: folder.appendingPathComponent("Info.plist")), data.count < 1_000_000,
                               let info = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else { continue }
                         let extensionInfo = info["NSExtension"] as? [String: Any]
-                        result.append(.init(id: folder.path, app: name, name: info["CFBundleDisplayName"] as? String ?? folder.deletingPathExtension().lastPathComponent, point: extensionInfo?["NSExtensionPointIdentifier"] as? String ?? "Unknown extension point"))
+                        result.append(.init(id: folder.path, app: name, name: info["CFBundleDisplayName"] as? String ?? folder.deletingPathExtension().lastPathComponent, point: extensionInfo?["NSExtensionPointIdentifier"] as? String ?? "Unknown extension point".loc))
                     }
                 }
                 return result.sorted { $0.app.localizedStandardCompare($1.app) == .orderedAscending }

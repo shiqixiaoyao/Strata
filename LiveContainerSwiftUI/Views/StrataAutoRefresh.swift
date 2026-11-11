@@ -155,7 +155,7 @@ struct StrataAutoRefreshSettings: View {
                 Text("When Strata opens, it checks your signing expiry and selected interval. You choose Refresh or Later. Refresh uses the supplied Set VPN Shortcut; a daily automation is optional.")
             }
             Section("Refresh status") {
-                Text(refresh.status).textSelection(.enabled).accessibilityIdentifier("refresh.status")
+                Text(refresh.status.loc).textSelection(.enabled).accessibilityIdentifier("refresh.status")
                 if let date = refresh.installedExpiry { LabeledContentCompat(title: "Installed signing expires", date: date) }
                 if let date = refresh.lastSuccess { LabeledContentCompat(title: "Last successful refresh", date: date) }
                 if enabled { LabeledContentCompat(title: "Next requested refresh", date: max(refresh.nextDue, .now)) }
@@ -179,5 +179,5 @@ struct StrataAutoRefreshSettings: View {
 private struct LabeledContentCompat: View {
     let title: String
     let date: Date
-    var body: some View { VStack(alignment: .leading, spacing: 5) { Text(title).font(.subheadline).foregroundStyle(.secondary); Text(date, style: .date); Text(date, style: .time) } }
+    var body: some View { VStack(alignment: .leading, spacing: 5) { Text(title.loc).font(.subheadline).foregroundStyle(.secondary); Text(date, style: .date); Text(date, style: .time) } }
 }

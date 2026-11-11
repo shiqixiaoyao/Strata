@@ -44,6 +44,9 @@ struct StrataVPNAutomationGuide: View {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
     private func step(_ number: Int, _ title: String, _ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) { Text("\(number). \(title)").font(.headline); Text(detail).font(.subheadline).foregroundStyle(.secondary) }.padding(.vertical, 4)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(number). " + title.loc).font(.headline)
+            Text(detail.loc).font(.subheadline).foregroundStyle(.secondary)
+        }.padding(.vertical, 4)
     }
 }

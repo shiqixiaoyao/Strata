@@ -74,7 +74,7 @@ class StrataPhoneAppInfo: LCAppInfo {
         return catalogCache?.schemes[bundleIdentifier] ?? []
     }
     func save(_ entry: StrataPhoneAppEntry, image: UIImage?) throws {
-        guard !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, (entry.bundleIdentifier.map(StrataPhoneAppPolicy.validBundleIdentifier) ?? (Self.launchURL(entry) != nil)) else { throw "Enter a name and valid app URL or Shortcut name." }
+        guard !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, (entry.bundleIdentifier.map(StrataPhoneAppPolicy.validBundleIdentifier) ?? (Self.launchURL(entry) != nil)) else { throw "Enter a name and valid app URL or Shortcut name.".loc }
         if let identifier = entry.bundleIdentifier, entries.contains(where: { $0.bundleIdentifier == identifier && $0.id != entry.id }) { return }
         let folder = root.appendingPathComponent(entry.id.uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -108,9 +108,9 @@ class StrataPhoneAppInfo: LCAppInfo {
         }
     }
     func open(_ id: UUID) async throws {
-        guard let entry = entries.first(where: { $0.id == id }) else { throw "This iPhone app entry is no longer available." }
+        guard let entry = entries.first(where: { $0.id == id }) else { throw "This iPhone app entry is no longer available.".loc }
         if let bundleID = entry.bundleIdentifier {
-            guard StrataPhoneAppPolicy.validBundleIdentifier(bundleID) else { throw "Invalid iPhone app selection." }
+            guard StrataPhoneAppPolicy.validBundleIdentifier(bundleID) else { throw "Invalid iPhone app selection.".loc }
             let error: String? = await withCheckedContinuation { continuation in
                 LCUtils.strataOpenPhoneApplication(bundleID) { continuation.resume(returning: $0) }
             }
@@ -127,9 +127,9 @@ class StrataPhoneAppInfo: LCAppInfo {
                 : "iOS doesn’t let Strata open this app directly, and its app link didn’t respond. Set an App URL or Shortcut for it under Settings → iPhone Apps → Advanced."
 
         }
-        guard let url = Self.launchURL(entry) else { throw "Invalid app URL or Shortcut name." }
+        guard let url = Self.launchURL(entry) else { throw "Invalid app URL or Shortcut name.".loc }
         let opened = await UIApplication.shared.open(url)
-        if !opened { throw "iOS could not open this app. Check its URL, or create a Shortcut with Open App and use that Shortcut's name." }
+        if !opened { throw "iOS could not open this app. Check its URL, or create a Shortcut with Open App and use that Shortcut's name.".loc }
     }
 }
 
@@ -153,7 +153,7 @@ struct StrataPhoneAppsView: View {
             Section("Added apps") {
                 ForEach(visibleEntries) { entry in
                     NavigationLink { StrataPhoneAppEditor(entry: entry) } label: {
-                        VStack(alignment: .leading) { Text(entry.name); Text(entry.bundleIdentifier != nil ? "iPhone app" : entry.shortcut ? "Shortcut · \(entry.target)" : entry.target).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                        VStack(alignment: .leading) { Text(entry.name); Text(entry.bundleIdentifier != nil ? "iPhone app".loc : (entry.shortcut ? LCStr("strata.phoneApps.shortcutTarget", "Shortcut · %@", entry.target) : entry.target)).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                     }
                 }.onDelete { offsets in let ids = offsets.map { visibleEntries[$0].id }; ids.forEach(store.remove) }
             }
@@ -179,7 +179,7 @@ private struct StrataPhoneAppEditor: View {
                 TextField("App name", text: $entry.name)
                 if entry.bundleIdentifier == nil {
                 Picker("Open using", selection: $entry.shortcut) { Text("Shortcut").tag(true); Text("App URL").tag(false) }
-                TextField(entry.shortcut ? "Exact Shortcut name" : "App URL, e.g. music://", text: $entry.target).autocapitalization(.none).disableAutocorrection(true)
+                TextField(entry.shortcut ? "Exact Shortcut name".loc : "App URL, e.g. music://".loc, text: $entry.target).autocapitalization(.none).disableAutocorrection(true)
                 } else { Text("Opens the selected app directly in iOS.").font(.footnote).foregroundStyle(.secondary) }
                 Button("Choose icon from Photos") { choosingImage = true }
                 if let image { Image(uiImage: image).resizable().scaledToFit().frame(height: 80) }
@@ -188,7 +188,7 @@ private struct StrataPhoneAppEditor: View {
                 }.accessibilityIdentifier("phoneApp.save")
             }
             if let error { Text(error).foregroundStyle(.red) }
-        }.navigationTitle(entry.name.isEmpty ? "Add iPhone App" : entry.name)
+        }.navigationTitle(entry.name.isEmpty ? "Add iPhone App".loc : entry.name)
         .sheet(isPresented: $choosingImage) { LiveBoardWallpaperPicker { image in self.image = image; choosingImage = false } }
     }
 }

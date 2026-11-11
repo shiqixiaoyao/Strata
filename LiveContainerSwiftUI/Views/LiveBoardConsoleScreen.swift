@@ -414,9 +414,9 @@ struct LiveBoardConsoleScreen: View {
         } else {
             VStack(alignment: .leading, spacing: 16) {
                 Spacer()
-                Text(favoritesOnly ? "Your favorites" : "Your library").font(.largeTitle.bold())
-                Text(favoritesOnly ? "Add favorites from an app’s options." : "Install your first app to get started.").foregroundStyle(.white.opacity(0.6))
-                Button(favoritesOnly ? "All apps" : "Manage apps") {
+                Text((favoritesOnly ? "Your favorites" : "Your library").loc).font(.largeTitle.bold())
+                Text((favoritesOnly ? "Add favorites from an app’s options." : "Install your first app to get started.").loc).foregroundStyle(.white.opacity(0.6))
+                Button((favoritesOnly ? "All apps" : "Manage apps").loc) {
                     if favoritesOnly { favoritesOnly = false } else { controller.stop(); openManagement() }
                 }.buttonStyle(.bordered)
                 Spacer()
@@ -428,7 +428,7 @@ struct LiveBoardConsoleScreen: View {
                     Button { if !movingLaunchButton { activate(app) } } label: {
                         HStack(spacing: 9) {
                             if launching { ProgressView().tint(.white) } else { Image(systemName: "play.fill").font(.system(size: 14)) }
-                            Text(category(app) == "Games" ? "Play Game" : "Launch App").font(.system(size: 17, weight: .semibold))
+                            Text((category(app) == "Games" ? "Play Game" : "Launch App").loc).font(.system(size: 17, weight: .semibold))
                         }.frame(minWidth: 140, minHeight: 46)
                     }
                     .liveBoardGlass(radius: 23)
@@ -495,7 +495,7 @@ struct LiveBoardConsoleScreen: View {
                                 Button { detailAction(index, app: app) } label: {
                                     HStack(spacing: 10) {
                                         Image(systemName: ["play.fill", "gearshape", "photo", "rectangle", "star", "arrow.counterclockwise", "rectangle.portrait", "eye.slash", "bolt.fill", "pencil", "gamecontroller.fill"][index]).frame(width: 24)
-                                        Text(["Launch", "App settings", "Choose landscape cover", "Choose background", favoriteKeys.contains(liveBoardAppKey(app)) ? "Remove favorite" : "Add favorite", "Reset artwork", "Choose portrait cover", "Hide in this mode", "Launch with JIT", "Rename / change app icon", "Request Game Mode"][index]).font(.system(size: 15))
+                                        Text(["Launch", "App settings", "Choose landscape cover", "Choose background", favoriteKeys.contains(liveBoardAppKey(app)) ? "Remove favorite" : "Add favorite", "Reset artwork", "Choose portrait cover", "Hide in this mode", "Launch with JIT", "Rename / change app icon", "Request Game Mode"][index].loc).font(.system(size: 15))
                                         Spacer(minLength: 0)
                                     }.padding(10).frame(minHeight: 40).background(detailsIndex == index ? .white.opacity(0.17) : .clear, in: RoundedRectangle(cornerRadius: 10))
                                 }.buttonStyle(.plain).id(index).accessibilityIdentifier("console.option.\(index)")

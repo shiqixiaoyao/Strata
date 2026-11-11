@@ -20,7 +20,7 @@ struct LCStorageManagementView: View {
                 NavigationLink { LCDataManagementView() } label: { Text("lc.settings.dataManagement".loc) }
             }
             if model.skippedEntries > 0 { Section { Text("Some files changed or could not be read during the scan. Totals may exclude them; tap Recalculate to retry.").font(.caption).foregroundStyle(.secondary) } }
-            if let date = model.lastCalculated { Section { Text("Last calculated: " + date.formatted()).font(.caption).foregroundStyle(.secondary) } }
+            if let date = model.lastCalculated { Section { Text(LCStr("strata.storage.lastCalculated %@", "Last calculated: %@", date.formatted())).font(.caption).foregroundStyle(.secondary) } }
             LCInstalledAppsSection(breakdown: model.breakdown)
         }
         .navigationTitle("lc.settings.storageManagement".loc)

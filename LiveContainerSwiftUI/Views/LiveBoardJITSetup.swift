@@ -50,7 +50,7 @@ struct LiveBoardJITSetup: View {
                             Label(operationSucceeded ? "Completed".loc : "Could not complete".loc, systemImage: operationSucceeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .foregroundStyle(operationSucceeded ? .green : .orange)
                         }
-                        if !session.message.isEmpty { Text(session.message).font(.footnote).textSelection(.enabled).accessibilityIdentifier("jit.status") }
+                        if !session.message.isEmpty { Text(session.message.loc).font(.footnote).textSelection(.enabled).accessibilityIdentifier("jit.status") }
                     }
                     Section("Launch") {
                         Text("Touch and hold an app, or open its console options, and choose Launch with JIT. Strata prepares the device and connects its helper automatically. Errors appear in the launch window.")
@@ -61,7 +61,7 @@ struct LiveBoardJITSetup: View {
                         NavigationLink("Provider settings") { LCSettingsView() }
                     }
                 }
-                if provider != JITEnablerType.BuiltIn.rawValue && !session.message.isEmpty { Section { Text(session.message) } }
+                if provider != JITEnablerType.BuiltIn.rawValue && !session.message.isEmpty { Section { Text(session.message.loc) } }
                 Section { NavigationLink("Memory and signing permissions") { StrataMemorySettings() } }
                 Section { NavigationLink("JIT-less setup and diagnostics") { LCJITLessDiagnoseView() } }
             }.navigationTitle("JIT setup")

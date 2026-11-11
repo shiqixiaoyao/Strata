@@ -467,7 +467,7 @@ static const CGFloat StrataDeckHeader = 36;   // icon row + gap above each card
         [self.deck addObject:@{@"view": view, @"body": body, @"header": header, @"shade": shade, @"entry": entry}];
     }
     if (entries.count == 0) {
-        UILabel *empty = [UILabel new]; empty.text = @"No open apps"; empty.textColor = [UIColor colorWithWhite:1 alpha:0.8];
+        UILabel *empty = [UILabel new]; empty.text = NSLocalizedString(@"No open apps", nil); empty.textColor = [UIColor colorWithWhite:1 alpha:0.8];
         empty.font = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium]; [empty sizeToFit];
         empty.center = CGPointMake(CGRectGetMidX(root.bounds), CGRectGetMidY(root.bounds));
         [stage addSubview:empty];

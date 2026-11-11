@@ -19,8 +19,8 @@ struct StrataIdentitySettings: View {
             Section("LocalSigner · Signing identity") {
                 Text("One local signing identity for Strata's existing signer and future engine adapters. Certificates do not extend provisioning expiration or grant new permissions.").font(.footnote)
                 if !fingerprint.isEmpty {
-                    LabeledContent("Storage", value: secured ? "Shared device-only Keychain" : "Legacy preferences")
-                    LabeledContent("Team", value: metadata["teamID"] as? String ?? "Unknown")
+                    LabeledContent("Storage", value: (secured ? "Shared device-only Keychain" : "Legacy preferences").loc)
+                    LabeledContent("Team", value: (metadata["teamID"] as? String ?? "Unknown").loc)
                     if let expiry = metadata["expires"] as? Date {
                         LabeledContent("Certificate expiry", value: expiry.formatted(date: .abbreviated, time: .omitted))
                         if expiry < Date() { Label("Expired — import a current identity", systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
@@ -36,14 +36,14 @@ struct StrataIdentitySettings: View {
             Section("Provisioning") {
                 Text("Apple account permissions and profile renewal remain in bundled SideStore. Local signing can reuse a valid identity; it cannot renew an expired profile offline.").font(.footnote)
             }
-            if !status.isEmpty { Section { Text(status).accessibilityIdentifier("identity.status") } }
+            if !status.isEmpty { Section { Text(status.loc).accessibilityIdentifier("identity.status") } }
         }
         .navigationTitle("Signing Identity").navigationBarTitleDisplayMode(.inline)
         .onAppear { refresh() }
         .fileImporter(isPresented: $selecting, allowedContentTypes: [.data]) { result in
             do {
                 let url = try result.get(); let scoped = url.startAccessingSecurityScopedResource(); defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                guard url.pathExtension.lowercased() == "p12", (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16 * 1024 * 1024 else { throw StrataPortableBackup.failure("Select a .p12 file smaller than 16 MB.") }
+                guard url.pathExtension.lowercased() == "p12", (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16 * 1024 * 1024 else { throw StrataPortableBackup.failure("Select a .p12 file smaller than 16 MB.".loc) }
                 pending = try Data(contentsOf: url); password = ""; askingPassword = true
             } catch { status = error.localizedDescription }
         }
@@ -54,7 +54,7 @@ struct StrataIdentitySettings: View {
         } message: { Text("The previous identity stays available if import fails.") }
         .confirmationDialog("Remove Strata's signing identity? Existing apps and data are kept.", isPresented: $removing, titleVisibility: .visible) {
             Button("Remove identity", role: .destructive) {
-                do { try LCSharedUtils.strataRemoveSigningIdentity(); clearLegacy(); refresh(); status = "Signing identity removed." }
+                do { try LCSharedUtils.strataRemoveSigningIdentity(); clearLegacy(); refresh(); status = "Signing identity removed.".loc }
                 catch { status = error.localizedDescription }
             }
         }
@@ -72,11 +72,11 @@ struct StrataIdentitySettings: View {
     private func store(_ data: Data, _ secret: String) {
         do {
             guard let info = LCUtils.strataCertificateMetadata(data, password: secret) as? [String: Any],
-                  let team = info["teamID"] as? String else { throw StrataPortableBackup.failure("The certificate or password could not be read.") }
-            if let installedTeam = LCSharedUtils.teamIdentifier(), !installedTeam.isEmpty, team != installedTeam { throw StrataPortableBackup.failure("This identity belongs to another signing team. Import the identity used to install Strata.") }
-            if let expiry = info["expires"] as? Date, expiry <= Date() { throw StrataPortableBackup.failure("This signing certificate has expired.") }
+                  let team = info["teamID"] as? String else { throw StrataPortableBackup.failure("The certificate or password could not be read.".loc) }
+            if let installedTeam = LCSharedUtils.teamIdentifier(), !installedTeam.isEmpty, team != installedTeam { throw StrataPortableBackup.failure("This identity belongs to another signing team. Import the identity used to install Strata.".loc) }
+            if let expiry = info["expires"] as? Date, expiry <= Date() { throw StrataPortableBackup.failure("This signing certificate has expired.".loc) }
             try LCSharedUtils.strataStoreSigningIdentity(data, password: secret)
-            clearLegacy(); refresh(); status = "Identity saved. Existing Strata signing now uses the shared Keychain vault."
+            clearLegacy(); refresh(); status = "Identity saved. Existing Strata signing now uses the shared Keychain vault.".loc
         } catch { status = error.localizedDescription }
     }
     private func clearLegacy() {

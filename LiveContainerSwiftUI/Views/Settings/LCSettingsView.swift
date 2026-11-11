@@ -93,7 +93,7 @@ struct LCSettingsView: View {
                     NavigationLink("iPhone Apps") { StrataPhoneAppsView() }
                     NavigationLink("Refresh") { StrataAutoRefreshSettings() }
                     if #available(iOS 16.0, *) {
-                    NavigationLink("Runtime Manager · Strata " + StrataVersion.display) { StrataRuntimeCenter(apps: sharedModel.apps + sharedModel.hiddenApps, launch: { app in Task { do {
+                    NavigationLink(LCStr("Runtime Manager · Strata %@", "Runtime Manager · Strata %@", StrataVersion.display)) { StrataRuntimeCenter(apps: sharedModel.apps + sharedModel.hiddenApps, launch: { app in Task { do {
                         if app.uiIsLocked && !sharedModel.isHiddenAppUnlocked { guard try await LCUtils.authenticateUser() else { return } }
                         try await app.runApp()
                     } catch { errorInfo = error.localizedDescription; errorShow = true } } }, manage: { _ in sharedModel.selectedTab = .apps }) }
@@ -424,7 +424,7 @@ struct LCSettingsView: View {
             }
             .alert("lc.common.success".loc, isPresented: $successShow){
             } message: {
-                Text(successInfo)
+                Text(successInfo.loc)
             }
             .alert("lc.settings.importCertificate".loc, isPresented: $certificateImportAlert.show) {
                 Button {

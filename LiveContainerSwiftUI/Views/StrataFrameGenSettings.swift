@@ -20,7 +20,7 @@ struct StrataFrameGenSettings: View {
             }
             Section("Latest guest measurement") {
                 if let status = sample["status"] as? String {
-                    Text(status)
+                    Text(status.loc)
                     Text("Native GPU: \(number("nativeGPUFPS")) FPS\nGenerated GPU: \(number("generatedGPUFPS")) FPS\nComputed total: \(number("computedFPS")) FPS\nPresented: \(number("presentedFPS")) FPS")
                         .font(.system(.footnote, design: .monospaced))
                     if let stamp = sample["sampledAt"] as? Double { Text(Date(timeIntervalSince1970: stamp), style: .relative).font(.caption).foregroundStyle(.secondary) }
@@ -29,7 +29,7 @@ struct StrataFrameGenSettings: View {
             }
             Section { Link("MetalFG — upstream project", destination: URL(string: "https://github.com/dnullptr/MetalFG")!) }
         }
-        .navigationTitle(selected?.displayName ?? "Frame Generation").navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(selected?.displayName ?? "Frame Generation".loc).navigationBarTitleDisplayMode(.inline)
         .task {
             while !Task.isCancelled {
                 if let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: LCSharedUtils.appGroupID() ?? ""),
