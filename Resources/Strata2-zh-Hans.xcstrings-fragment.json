@@ -1116,5 +1116,7 @@
   "add": "添加",
   "strata.appList.appCounter": "%lld 个 App",
   "strata.settings.cleanDataFolderConfirm": "将从容器中永久删除 %lld 个 App 的数据文件夹，此操作无法撤销。",
-  "strata.settings.moveDanglingFolderComplete": "已移动 %lld 个数据文件夹与 %lld 个插件文件夹。"
+  "strata.settings.moveDanglingFolderComplete": "已移动 %lld 个数据文件夹与 %lld 个插件文件夹。",
+  "Ports": "移植",
+  "Tools": "工具"
 }

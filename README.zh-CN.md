@@ -78,7 +78,8 @@ v13 之前只覆盖了「有明显的 `Text("...")` 字面量」这一层，`Tex
 - **带插值的提示**：改为 `LCStr("key", "fallback", args)` 固定 key，避免 Xcode 抽取键名漂移（新增 `strata.jit.guestAck` / `strata.memory.*` 等 9 个 key）。
 - **ObjC 侧**：`StrataGuestControls` 的「App 控制不可用 / 隐藏 App 条 / 没有打开的 App」改用 `NSLocalizedString`。
 - 带格式参数的三处文案（`"%lld apps"`、清理数据文件夹确认、移动文件夹完成）原用 `.localizeWithFormat()`，Xcode 抽取的键名与片段不一致导致回落英文，改为固定 key 的 `LCStr`。
-- 中文文案 **1337 → 1449 条**（片段 1005 → 1118 项）。
+- **分类标签**：LiveBoard 的默认分类（Games / Ports / Tools）作为数据仍保留英文键，显示层改走 `.loc`，并补上 `Ports`「移植」、`Tools`「工具」两条译文，避免分类条出现英文。
+- 中文文案 **1337 → 1451 条**（片段 1005 → 1120 项）。
 
 包版本提升到 **3.8.23**。
 

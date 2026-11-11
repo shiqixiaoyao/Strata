@@ -236,7 +236,7 @@ struct LiveBoardConsoleScreen: View {
                 HStack(spacing: 18) {
                     ForEach(library.categories, id: \.self) { name in
                         Button { activeCategory = activeCategory == name ? nil : name; favoritesOnly = false; navigation.selectedIndex = 0 } label: {
-                            Text(name).font(.system(size: 13, weight: activeCategory == name ? .bold : .regular)).foregroundStyle(.white.opacity(activeCategory == name ? 1 : 0.55)).padding(.vertical, 6)
+                            Text(name.loc).font(.system(size: 13, weight: activeCategory == name ? .bold : .regular)).foregroundStyle(.white.opacity(activeCategory == name ? 1 : 0.55)).padding(.vertical, 6)
                         }.accessibilityIdentifier("console.category." + name)
                     }
                 }
@@ -252,7 +252,7 @@ struct LiveBoardConsoleScreen: View {
                 Section("Categories for this mode") {
                     HStack { TextField("New category", text: $newCategory).accessibilityIdentifier("console.category.name"); Button("Add") { updateLibrary { _ = $0.addCategory(newCategory) }; newCategory = "" }.accessibilityIdentifier("console.category.add").disabled(newCategory.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
                     ForEach(library.categories, id: \.self) { name in
-                        HStack { Text(name); Spacer(); Button(role: .destructive) { updateLibrary { $0.removeCategory(name) }; if activeCategory == name { activeCategory = nil } } label: { Image(systemName: "trash") } }
+                        HStack { Text(name.loc); Spacer(); Button(role: .destructive) { updateLibrary { $0.removeCategory(name) }; if activeCategory == name { activeCategory = nil } } label: { Image(systemName: "trash") } }
                     }
                 }
                 Section("Apps in this mode") {
@@ -261,7 +261,7 @@ struct LiveBoardConsoleScreen: View {
                             Toggle(appCustomization.name(app), isOn: Binding(get: { !library.hidden.contains(liveBoardAppKey(app)) }, set: { show in updateLibrary { if show { $0.hidden.remove(liveBoardAppKey(app)) } else { $0.hidden.insert(liveBoardAppKey(app)) } } }))
                             Picker("Category", selection: Binding(get: { library.assignments[liveBoardAppKey(app)] ?? "" }, set: { name in updateLibrary { $0.assignments[liveBoardAppKey(app)] = name.isEmpty ? nil : name } })) {
                                 Text("Uncategorized").tag("")
-                                ForEach(library.categories, id: \.self) { Text($0).tag($0) }
+                                ForEach(library.categories, id: \.self) { Text($0.loc).tag($0) }
                             }
                         }
                     }
