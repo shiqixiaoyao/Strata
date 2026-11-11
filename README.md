@@ -184,6 +184,29 @@ behave exactly like v18 first:
 Bundle version **3.8.29**.
 
 
+### v22: the fan no longer blocks the main thread
+
+The gesture used to run a pile of synchronous disk IO on the main thread:
+
+- `LCOrbitGuestService.installedApps` walks both Applications directories, reads `LCAppInfo.plist`
+  and `Info.plist` for every app and probes the executable with `fileExistsAtPath:`;
+- every icon then reads `LCAppIconLight.png` synchronously (up to eight of them);
+- the backdrop was a full-screen `UIVisualEffectView` with `SystemUltraThinMaterialDark`, and each
+  `layoutSubviews` allocated a fresh `CAShapeLayer` as its mask.
+
+Now:
+
+- **Inventory is cached**: a background serial queue scans and caches for 60 seconds, so the gesture
+  only touches memory; it is warmed up on install/activation.
+- **Icons load asynchronously**: a placeholder goes up immediately, the PNG is read off-main and
+  applied back on main; a panel already on screen is refreshed when the inventory lands.
+- **Backdrop replaced**: plain translucent black plus a mask layer created once, same shape, orders
+  of magnitude cheaper.
+- An empty panel is never shown while the inventory is still warming up.
+
+Bundle version **3.8.30**.
+
+
 ## JIT and RAM setup
 
 Import your own pairing record on the device, keep your working LocalDevVPN configuration, enable Developer Mode, and use JIT → Prepare device. Launch with JIT uses the existing guest runtime and a headless StikJIT helper. Script compatibility varies: Universal is selected automatically only for verified IDs; custom imports and per-app overrides remain available.

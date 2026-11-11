@@ -64,18 +64,46 @@ static CGFloat LCFanTriggerSize(void) {
 
 #pragma mark - 图标
 
-static UIImage *LCFanIconImage(NSDictionary *app) {
-    NSString *folder = app[@"folder"];
-    if (![folder isKindOfClass:[NSString class]] || folder.length == 0) {
-        return nil;
-    }
+// 所有读盘（扫描已安装 App、读 png、读 Info.plist）都必须离开主线程。
+// v19/v20 里这些全在主线程上、而且正好发生在「手指刚按下角落」那一刻：
+// 一屏几十个 App 就是几十次 plist + 8 次 png 读取，主线程被按住不放，
+// 表现出来就是「往上一拉就卡」。
+static dispatch_queue_t LCFanWorkQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        queue = dispatch_queue_create("com.strata.cornerfan.inventory", DISPATCH_QUEUE_SERIAL);
+        dispatch_set_target_queue(queue, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0));
+    });
+    return queue;
+}
+
+static NSCache *LCFanIconCache(void) {
     static NSCache *cache;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         cache = [NSCache new];
-        cache.countLimit = 64;
+        cache.countLimit = 96;
     });
-    UIImage *saved = [cache objectForKey:folder];
+    return cache;
+}
+
+// 只在主线程调用：命中缓存就直接用，没命中返回 nil，由调用方先摆占位图。
+static UIImage *LCFanCachedIcon(NSDictionary *app) {
+    NSString *folder = app[@"folder"];
+    if (![folder isKindOfClass:[NSString class]] || folder.length == 0) {
+        return nil;
+    }
+    return [LCFanIconCache() objectForKey:folder];
+}
+
+// 允许在后台线程调用，会读盘并写回缓存。
+static UIImage *LCFanLoadIcon(NSDictionary *app) {
+    NSString *folder = app[@"folder"];
+    if (![folder isKindOfClass:[NSString class]] || folder.length == 0) {
+        return nil;
+    }
+    UIImage *saved = [LCFanIconCache() objectForKey:folder];
     if (saved) {
         return saved;
     }
@@ -113,18 +141,65 @@ static UIImage *LCFanIconImage(NSDictionary *app) {
         }
     }
     if (image) {
-        [cache setObject:image forKey:folder];
+        [LCFanIconCache() setObject:image forKey:folder];
     }
     return image;
 }
 
 #pragma mark - 应用清单
 
+// 清单缓存：手势发生的那一刻只读内存，绝不在主线程上扫目录。
+static NSArray<NSDictionary *> *LCFanAppCache;
+static NSTimeInterval LCFanAppCacheStamp;
+static BOOL LCFanAppRefreshing;
+static const NSTimeInterval LCFanAppCacheTTL = 60.0;
+
+// 扫一遍已安装 App 并把用到的图标预读进缓存。全部在后台队列完成。
+static void LCFanRefreshApps(BOOL force) {
+    NSTimeInterval now = [NSDate date].timeIntervalSince1970;
+    if (LCFanAppRefreshing) { return; }
+    if (!force && LCFanAppCache && now - LCFanAppCacheStamp < LCFanAppCacheTTL) { return; }
+    LCFanAppRefreshing = YES;
+    dispatch_async(LCFanWorkQueue(), ^{
+        NSArray<NSDictionary *> *all = [LCOrbitGuestService installedApps];
+        if (![all isKindOfClass:[NSArray class]]) { all = @[]; }
+        id pinned = LCFanObject(LCFanAppsKey);
+        NSMutableArray<NSDictionary *> *prefetch = [NSMutableArray array];
+        if ([pinned isKindOfClass:[NSArray class]]) {
+            for (id identity in (NSArray *)pinned) {
+                if (![identity isKindOfClass:[NSString class]]) { continue; }
+                for (NSDictionary *app in all) {
+                    if ([app[@"identity"] isEqual:identity]) { [prefetch addObject:app]; break; }
+                }
+            }
+        }
+        for (NSDictionary *app in all) {
+            if (prefetch.count >= LCFanMaxItems) { break; }
+            if (![app[@"launchable"] boolValue] || [app[@"hidden"] boolValue] ||
+                [app[@"builtin"] boolValue]) { continue; }
+            [prefetch addObject:app];
+        }
+        for (NSDictionary *app in prefetch) {
+            LCFanLoadIcon(app);
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            LCFanAppCache = all;
+            LCFanAppCacheStamp = [NSDate date].timeIntervalSince1970;
+            LCFanAppRefreshing = NO;
+            // 清单/图标到齐后，如果扇形此刻正摊在屏幕上（手指还按着），就地补一次图标。
+            [[LCCornerFanMenu shared] refreshVisibleIcons];
+        });
+    });
+}
+
 static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
-    NSArray<NSDictionary *> *all = [LCOrbitGuestService installedApps];
+    NSArray<NSDictionary *> *all = LCFanAppCache;
     if (![all isKindOfClass:[NSArray class]]) {
+        // 还没预热过：先起后台扫描，这一下不展开面板，避免拿空列表糊弄用户。
+        LCFanRefreshApps(YES);
         return @[];
     }
+    LCFanRefreshApps(NO);
     NSMutableArray<NSDictionary *> *result = [NSMutableArray array];
     id pinned = LCFanObject(LCFanAppsKey);
     if ([pinned isKindOfClass:[NSArray class]]) {
@@ -174,6 +249,8 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 @property(nonatomic, strong) UILabel *nameLabel;
 @property(nonatomic, assign) BOOL highlighted;
 @property(nonatomic, assign) CGPoint home;
+- (void)applyPlaceholder;
+- (void)applyIcon:(UIImage *)image;
 @end
 
 @implementation LCCornerFanIcon
@@ -208,19 +285,47 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 
 - (void)setApp:(NSDictionary *)app {
     _app = app;
-    UIImage *image = LCFanIconImage(app);
-    if (!image) {
-        UIImageSymbolConfiguration *configuration =
-            [UIImageSymbolConfiguration configurationWithPointSize:LCFanIconSize * 0.46
-                                                            weight:UIImageSymbolWeightSemibold];
-        image = [UIImage systemImageNamed:@"square.grid.2x2.fill" withConfiguration:configuration];
-        self.iconView.tintColor = [UIColor colorWithWhite:1 alpha:0.85];
-        self.iconView.backgroundColor = [UIColor colorWithWhite:1 alpha:0.14];
-        self.iconView.contentMode = UIViewContentModeCenter;
+    [self applyPlaceholder];
+    UIImage *cached = LCFanCachedIcon(app);
+    if (cached) {
+        [self applyIcon:cached];
+        return;
     }
+    // 缓存里没有就先去后台读，绝不在构建面板时同步读 png。
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(LCFanWorkQueue(), ^{
+        UIImage *image = LCFanLoadIcon(app);
+        if (!image) { return; }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            LCCornerFanIcon *strongSelf = weakSelf;
+            if (!strongSelf || strongSelf.app != app) { return; }
+            [strongSelf applyIcon:image];
+        });
+    });
+}
+
+- (void)applyPlaceholder {
+    UIImageSymbolConfiguration *configuration =
+        [UIImageSymbolConfiguration configurationWithPointSize:LCFanIconSize * 0.46
+                                                        weight:UIImageSymbolWeightSemibold];
+    self.iconView.image = [UIImage systemImageNamed:@"square.grid.2x2.fill" withConfiguration:configuration];
+    self.iconView.tintColor = [UIColor colorWithWhite:1 alpha:0.85];
+    self.iconView.backgroundColor = [UIColor colorWithWhite:1 alpha:0.14];
+    self.iconView.contentMode = UIViewContentModeCenter;
+    id rawTitle = self.app[@"title"];
+    NSString *title = [rawTitle isKindOfClass:[NSString class]] ? (NSString *)rawTitle : self.app[@"path"];
+    self.nameLabel.text = title;
+    self.accessibilityLabel = title;
+}
+
+- (void)applyIcon:(UIImage *)image {
+    if (!image) { return; }
+    self.iconView.contentMode = UIViewContentModeScaleAspectFit;
+    self.iconView.backgroundColor = UIColor.clearColor;
+    self.iconView.tintColor = nil;
     self.iconView.image = image;
-    id rawTitle = app[@"title"];
-    NSString *title = [rawTitle isKindOfClass:[NSString class]] ? (NSString *)rawTitle : app[@"path"];
+    id rawTitle = self.app[@"title"];
+    NSString *title = [rawTitle isKindOfClass:[NSString class]] ? (NSString *)rawTitle : self.app[@"path"];
     self.nameLabel.text = title;
     self.accessibilityLabel = title;
 }
@@ -248,7 +353,8 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 @property(nonatomic, assign) NSInteger corner;   // 0 = 左下, 1 = 右下
 @property(nonatomic, strong) NSArray<LCCornerFanIcon *> *icons;
 @property(nonatomic, assign) NSInteger selection;
-@property(nonatomic, strong) UIVisualEffectView *backdrop;
+@property(nonatomic, strong) UIView *backdrop;
+@property(nonatomic, strong) CAShapeLayer *maskLayer;
 @property(nonatomic, strong) UIView *hintView;
 @property(nonatomic, strong) UILabel *hintLabel;
 @property(nonatomic, strong) CAShapeLayer *ringLayer;
@@ -272,8 +378,11 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     self.selection = -1;
     self.feedback = [UISelectionFeedbackGenerator new];
 
-    _backdrop = [[UIVisualEffectView alloc] initWithEffect:
-        [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark]];
+    // 这里原来是一整块 UIVisualEffectView 的 SystemUltraThinMaterialDark。
+    // 全屏毛玻璃 + 每次 layout 重新挂一次遮罩，在拖动时基本就是把主线程钉住。
+    // 现在换成普通半透明黑底，形状靠下面的扇形遮罩给出，观感接近但开销小两个量级。
+    _backdrop = [[UIView alloc] initWithFrame:CGRectZero];
+    _backdrop.backgroundColor = [UIColor colorWithWhite:0 alpha:0.46];
     _backdrop.frame = self.bounds;
     _backdrop.userInteractionEnabled = NO;
     _backdrop.alpha = 0;
@@ -370,10 +479,12 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     [path addArcWithCenter:center radius:radius startAngle:[self startAngle] endAngle:[self endAngle] clockwise:YES];
     [path closePath];
 
-    CAShapeLayer *mask = [CAShapeLayer layer];
-    mask.path = path.CGPath;
-    mask.fillColor = UIColor.blackColor.CGColor;
-    self.backdrop.layer.mask = mask;
+    if (!self.maskLayer) {
+        self.maskLayer = [CAShapeLayer layer];
+        self.maskLayer.fillColor = UIColor.blackColor.CGColor;
+        self.backdrop.layer.mask = self.maskLayer;
+    }
+    self.maskLayer.path = path.CGPath;
 
     UIBezierPath *stroke = [UIBezierPath bezierPath];
     [stroke addArcWithCenter:center radius:radius startAngle:[self startAngle] endAngle:[self endAngle] clockwise:YES];
@@ -599,6 +710,8 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     if (!scene) {
         return;
     }
+    // 预热清单与图标：真到用户拉的时候只读内存。
+    LCFanRefreshApps(NO);
     if (menu.window && menu.scene == scene) {
         menu.window.frame = scene.coordinateSpace.bounds;
         menu.rootView.frame = menu.window.bounds;
@@ -610,6 +723,22 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
         return;
     }
     [menu buildWindowForScene:scene];
+}
+
+- (void)refreshVisibleIcons {
+    if (!NSThread.isMainThread) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self refreshVisibleIcons];
+        });
+        return;
+    }
+    for (LCCornerFanIcon *icon in self.panel.icons) {
+        NSDictionary *app = icon.app;
+        if (![app isKindOfClass:[NSDictionary class]]) { continue; }
+        if ([app[@"menu"] boolValue]) { continue; }
+        UIImage *image = LCFanCachedIcon(app);
+        if (image) { [icon applyIcon:image]; }
+    }
 }
 
 + (void)reload {
@@ -728,6 +857,11 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 - (void)presentFanAtCorner:(NSInteger)corner {
     [self.panel removeFromSuperview];
     NSArray<NSDictionary *> *apps = LCFanCandidateApps();
+    if (apps.count == 0) {
+        // 清单还没预热完：这一下不摊面板，避免出现「拉了没反应」的空手势。
+        self.rootView.presenting = NO;
+        return;
+    }
     LCCornerFanPanel *panel = [[LCCornerFanPanel alloc] initWithFrame:self.rootView.bounds
                                                               corner:corner
                                                                 apps:apps];
