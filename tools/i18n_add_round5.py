@@ -65,6 +65,15 @@ ADD = {
     "Checks whether Strata still has an active JIT or scheduled refresh session. Does not detect VPN use by other apps.": "检查 Strata 是否还有进行中的 JIT 或计划刷新会话。不会检测其他 App 对 VPN 的使用。",
     "Strata Refresh Gate (Text)": "Strata 刷新判定（文本）",
     "Strata Disconnect Gate (Text)": "Strata 断开判定（文本）",
+    # —— LiveProcess（访客进程）：启动失败与 JIT 等待的提示 ——
+    "Cannot resolve guest file access. Relaunch from the app library.": "无法解析访客 App 的文件访问权限。请从 App 列表重新启动。",
+    "The guest cannot read its selected 32-bit runtime after granting file access.": "授权文件访问后，访客 App 仍无法读取所选的 32 位运行时。",
+    "Cannot read guest debugging status.": "无法读取访客 App 的调试状态。",
+    "Invalid JIT guest startup request.": "无效的访客 JIT 启动请求。",
+    "Guest startup paused until debugger attaches.": "访客启动已暂停，等待调试器连接。",
+    "Cannot save the guest JIT startup acknowledgement.": "无法保存访客 JIT 启动确认。",
+    "Debugger attached; entering the existing guest runtime.": "调试器已连接，正在进入已有的访客运行时。",
+    "Guest timed out waiting for debugger attachment. Check the saved JIT status.": "访客等待调试器连接超时。请检查已保存的 JIT 状态。",
     # —— 计划刷新的结果句（会写进 StrataRefreshStatus 并显示在设置页）——
     "Skipped: Strata refresh is not due, disabled or recently attempted.": "已跳过：Strata 刷新还没到期、已关闭，或刚刚尝试过。",
     "Skipped: waiting for Wi-Fi; cellular attempts are disabled or network status is unavailable.": "已跳过：正在等待 Wi-Fi；蜂窝网络刷新已关闭，或无法获取网络状态。",

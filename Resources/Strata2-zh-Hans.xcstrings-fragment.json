@@ -2567,5 +2567,13 @@
   "Failed: %@": "失败：%@",
   "Refreshing through Shortcuts and bundled SideStore…": "正在通过快捷指令与内置 SideStore 刷新…",
   "Refreshed: SideStore confirmed all apps refreshed successfully.": "已刷新：SideStore 确认所有 App 刷新成功。",
-  "Failed: SideStore refresh timed out. Check VPN, pairing and account status.": "失败：SideStore 刷新超时。请检查 VPN、配对和账号状态。"
+  "Failed: SideStore refresh timed out. Check VPN, pairing and account status.": "失败：SideStore 刷新超时。请检查 VPN、配对和账号状态。",
+  "Cannot resolve guest file access. Relaunch from the app library.": "无法解析访客 App 的文件访问权限。请从 App 列表重新启动。",
+  "The guest cannot read its selected 32-bit runtime after granting file access.": "授权文件访问后，访客 App 仍无法读取所选的 32 位运行时。",
+  "Cannot read guest debugging status.": "无法读取访客 App 的调试状态。",
+  "Invalid JIT guest startup request.": "无效的访客 JIT 启动请求。",
+  "Guest startup paused until debugger attaches.": "访客启动已暂停，等待调试器连接。",
+  "Cannot save the guest JIT startup acknowledgement.": "无法保存访客 JIT 启动确认。",
+  "Debugger attached; entering the existing guest runtime.": "调试器已连接，正在进入已有的访客运行时。",
+  "Guest timed out waiting for debugger attachment. Check the saved JIT status.": "访客等待调试器连接超时。请检查已保存的 JIT 状态。"
 }

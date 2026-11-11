@@ -8,7 +8,7 @@ NSError *StrataWaitForGuestDebugger(NSString *token, NSURL *root, NSTimeInterval
         return [NSError errorWithDomain:@"StrataJITGuest" code:12 userInfo:@{NSLocalizedDescriptionKey:message}];
     };
     if (![[NSUUID alloc] initWithUUIDString:token] || !root || !isfinite(timeout) || timeout <= 0)
-        return failure(@"Invalid JIT guest startup request.");
+        return failure(NSLocalizedString(@"Invalid JIT guest startup request.", nil));
     NSURL *directory = [root URLByAppendingPathComponent:@"Library/StrataJITGuest"];
     NSError *error;
     if (![NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:&error]) return error;
@@ -21,18 +21,18 @@ NSError *StrataWaitForGuestDebugger(NSString *token, NSURL *root, NSTimeInterval
         return data && [data writeToURL:recordURL options:NSDataWritingAtomic error:nil]
                     && [data writeToURL:pidURL options:NSDataWritingAtomic error:nil];
     };
-    if (!report(@"waiting", @"Guest startup paused until debugger attaches."))
-        return failure(@"Cannot save the guest JIT startup acknowledgement.");
+    if (!report(@"waiting", NSLocalizedString(@"Guest startup paused until debugger attaches.", nil)))
+        return failure(NSLocalizedString(@"Cannot save the guest JIT startup acknowledgement.", nil));
     NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + timeout;
     while (YES) {
         NSError *readError = nil;
         if (isDebugged(&readError)) {
-            report(@"attached", @"Debugger attached; entering the existing guest runtime.");
+            report(@"attached", NSLocalizedString(@"Debugger attached; entering the existing guest runtime.", nil));
             return nil;
         }
         if (readError) { report(@"failed", readError.localizedDescription); return readError; }
         if (NSProcessInfo.processInfo.systemUptime >= deadline) {
-            NSError *expired = failure(@"Guest timed out waiting for debugger attachment. Check the saved JIT status.");
+            NSError *expired = failure(NSLocalizedString(@"Guest timed out waiting for debugger attachment. Check the saved JIT status.", nil));
             report(@"failed", expired.localizedDescription);
             return expired;
         }
