@@ -2515,5 +2515,7 @@
   "strata.home.folderSummary %@ %lld": "%@，文件夹，%lld 个 App",
   "strata.home.applyWallpaper %@ %@": "应用 %@，%@壁纸",
   "live": "动态",
-  "static": "静态"
+  "static": "静态",
+  "strata.memory.helperLabel %@": "辅助进程 · %@",
+  "strata.memory.strataLabel %@": "Strata · %@"
 }

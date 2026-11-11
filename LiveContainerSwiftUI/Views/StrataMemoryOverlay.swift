@@ -90,9 +90,9 @@ struct StrataMemoryOverlayView: View {
     }
     private func label(_ s: StrataMemorySample) -> String {
         switch s.role {
-        case "helper": return "Helper · " + s.name
-        case "app": return s.name.isEmpty ? "App" : s.name
-        default: return s.name.isEmpty || s.name == "Strata" ? "Strata" : "Strata · " + s.name
+        case "helper": return LCStr("strata.memory.helperLabel %@", "Helper · %@", s.name)
+        case "app": return s.name.isEmpty ? "App".loc : s.name
+        default: return s.name.isEmpty || s.name == "Strata" ? "Strata" : LCStr("strata.memory.strataLabel %@", "Strata · %@", s.name)
         }
     }
     private func color(_ role: String) -> Color { role == "helper" ? .orange : role == "app" ? .green : .cyan }
