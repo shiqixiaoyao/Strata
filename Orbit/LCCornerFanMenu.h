@@ -11,9 +11,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LCCornerFanMenu : NSObject
-/// 是否启用（读取 LCCornerFanEnabled，缺省开启；仅在 LC 宿主界面生效）。
++ (instancetype)shared;
+/// 是否启用（读取 LCCornerFanEnabled，缺省关闭；仅在 LC 宿主界面生效）。
 + (BOOL)isEnabled;
-/// 是否保留原来的悬浮球（默认不保留，悬浮球由扇形菜单取代）。
+/// 是否保留原来的悬浮球（默认保留，扇形只是多一个入口）。
 + (BOOL)keepsOrb;
 + (BOOL)leftCornerEnabled;
 + (BOOL)rightCornerEnabled;
@@ -21,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)installIfNeeded;
 /// 设置变化后调用，立即按新配置重建。
 + (void)reload;
+/// 后台清单/图标就绪后，给正在显示的扇形补图（主线程调用）。
+- (void)refreshVisibleIcons;
 @end
 
 NS_ASSUME_NONNULL_END
