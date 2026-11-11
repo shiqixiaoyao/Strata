@@ -554,18 +554,18 @@ struct LiveBoardHomeScreen: View {
 
     private var controls: some View {
         StrataToolsPage(tools: [
-            .init(id: "runtimes", title: "Runtime Manager", detail: "Guests · Files · Backups · Signing", symbol: "shippingbox.fill", action: { runtimeSetup = true }),
-            .init(id: "interface", title: "Interface", detail: "iOS Home Screen", symbol: "square.grid.3x3.fill", action: openInterface),
-            .init(id: "refresh", title: "Automatic refresh", detail: toolsRefresh.enabled ? "Every \(toolsRefresh.days) days · SideStore" : "Schedule & refresh apps", symbol: "arrow.triangle.2.circlepath", action: { refreshSetup = true }),
-            .init(id: "framegen", title: "Frame Generation", detail: "2× Metal · experimental", symbol: "square.3.layers.3d", action: { frameGenApp = nil; frameGenSetup = true }),
+            .init(id: "runtimes", title: "Runtime Manager".loc, detail: "Guests · Files · Backups · Signing".loc, symbol: "shippingbox.fill", action: { runtimeSetup = true }),
+            .init(id: "interface", title: "Interface".loc, detail: "iOS Home Screen".loc, symbol: "square.grid.3x3.fill", action: openInterface),
+            .init(id: "refresh", title: "Automatic refresh".loc, detail: toolsRefresh.enabled ? "Every \(toolsRefresh.days) days · SideStore" : "Schedule & refresh apps", symbol: "arrow.triangle.2.circlepath", action: { refreshSetup = true }),
+            .init(id: "framegen", title: "Frame Generation".loc, detail: "2× Metal · experimental".loc, symbol: "square.3.layers.3d", action: { frameGenApp = nil; frameGenSetup = true }),
             .init(id: "sources", title: "lc.tabView.sources".loc, detail: secondaryInstance ? "Manage in primary instance" : "Discover & install", symbol: "books.vertical", disabled: secondaryInstance, action: { openTab(.sources) }),
             .init(id: "tweaks", title: "lc.tabView.tweaks".loc, detail: secondaryInstance ? "Manage in primary instance" : "App extensions", symbol: "wrench.and.screwdriver", disabled: secondaryInstance, action: { openTab(.tweaks) }),
-            .init(id: "wallpaper", title: "Wallpaper", detail: "Customize", symbol: "photo", action: { customizing = true }),
-            .init(id: "apps", title: "Apps", detail: "Install & manage", symbol: "square.stack.3d.up", action: openManagement),
+            .init(id: "wallpaper", title: "Wallpaper".loc, detail: "Customize".loc, symbol: "photo", action: { customizing = true }),
+            .init(id: "apps", title: "Apps".loc, detail: "Install & manage".loc, symbol: "square.stack.3d.up", action: openManagement),
             .init(id: "settings", title: "lc.tabView.settings".loc, detail: StrataVersion.display, symbol: "gearshape.fill", action: { NotificationCenter.default.post(name: .strataOpenSettings, object: nil) }),
-            .init(id: "jit", title: "JIT", detail: "Setup & providers", symbol: "bolt.fill", action: { jitSetup = true }),
-            .init(id: "storage", title: "Storage", detail: toolsStorageDetail, symbol: "internaldrive", disabled: secondaryInstance, action: { storageSetup = true }),
-            .init(id: "memory", title: "Memory", detail: toolsMemoryDetail, symbol: "memorychip", action: { memorySetup = true })
+            .init(id: "jit", title: "JIT".loc, detail: "Setup & providers".loc, symbol: "bolt.fill", action: { jitSetup = true }),
+            .init(id: "storage", title: "Storage".loc, detail: toolsStorageDetail, symbol: "internaldrive", disabled: secondaryInstance, action: { storageSetup = true }),
+            .init(id: "memory", title: "Memory".loc, detail: toolsMemoryDetail, symbol: "memorychip", action: { memorySetup = true })
         ])
         .task(id: page == 0) {
             guard page == 0 else { return }
