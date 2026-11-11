@@ -1,4 +1,4 @@
-# Strata 2.0
+# Strata 4.0 (Simplified Chinese build)
 
 **English** | [简体中文](README.zh-CN.md)
 
@@ -22,6 +22,18 @@ Artwork, categories and hidden-app choices are independent between interfaces. I
 - Native paged scrolling, continuous dock/backdrop transitions and Home-only page dots with scrubbing.
 - Drag-to-create folders, drag apps out, dissolve folders while retaining apps, and hold blank Home space to edit.
 - Launch with Metal HUD for supported Metal apps.
+
+## What's new in 4.0 (synced from upstream)
+
+This build now tracks [huzaifahshahid71-ops/Strata](https://github.com/huzaifahshahid71-ops/Strata) 4.0:
+
+- **Six interfaces**: the original iOS Home Screen, Cinematic and Big Picture plus Switchboard, Shelf and Arcade, all controller navigable.
+- **Runtime manager**: guest file browsing, portable backups (create, verify, restore) and signing identity / Keychain migration in one place.
+- **Automatic refresh**: schedule SideStore refreshes by interval, get reminded when they fall due, and optionally drive LocalDevVPN through the Set VPN Shortcut.
+- **Frame generation (experimental)**: 2x/3x/4x presented frames with a measurement panel.
+- **Storage index**: rescan guest containers and recompute their footprint on demand.
+- **Memory overlay**: live usage and limits for Strata, each app and each helper process.
+- **HostJIT in-process**: the existing iOS launch, guest-extension JIT and multitasking paths stay as fallbacks.
 
 ## Download and install
 
@@ -129,6 +141,27 @@ This release:
 - The glossary grows to **106 entries**, adding field names such as `Date`, `Email`, `Name`, `Type`, `Source Name`, `Developer`, `Installed`, `YES`, `NO` and `stable`.
 
 Bundle version **3.8.26**.
+
+
+### v19: synced with upstream Strata 4.0
+
+`git merge` of upstream `main` (`3221d76`, Release Strata 4.0) into this branch, with the common
+ancestor v2.0.0 as the merge base:
+
+- **Both fork-owned pieces survived**: the Orbit multitasking layer (its own `Orbit/` tree, no
+  conflict) and the Simplified Chinese localization.
+- **Eight conflicts resolved**: the new Switchboard / Shelf / Arcade interfaces in `LiveBoard` keep
+  `.loc`; `LiveBoardHomeScreen` takes the upstream tools page; `StrataMemoryCapabilities` takes the
+  upstream RAM-bypass wording with `.loc`; `LCAppModel` restores `fixBackgroundTaskIdentifiers`;
+  `LCBootstrap` keeps the upstream memory sampler; `Info.plist` is pinned to **4.0.0**.
+- **CI stays on this repository's setup**: `runs-on: macos-latest` with Xcode 26.2 (upstream uses a
+  self-hosted `xcode-27` label), and the Chinese catalog merge step is preserved.
+- **219 new zh-Hans entries** cover the 4.0 surfaces. `StrataToolsPage.Tool` stores `String`, so its
+  titles need an explicit `.loc` to hit the catalog.
+- One upstream Swift 6 problem fixed: `Task.detached` returning `NSDictionary` is not `Sendable`, the
+  closure collapsed to `Void`; the scan now converts to `[[String: String]]` inside the task.
+
+Bundle version **4.0.0**.
 
 
 ## JIT and RAM setup

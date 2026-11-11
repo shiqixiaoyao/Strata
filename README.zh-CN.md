@@ -1,4 +1,4 @@
-# Strata 2.0
+# Strata 4.0（简体中文构建）
 
 [English](README.md) | **简体中文**
 
@@ -22,6 +22,18 @@
 - 原生分页滚动、连续的程序坞/背景过渡动画，以及仅在主屏幕显示的翻页圆点（支持拖动）。
 - 拖动可创建文件夹、将 App 拖出文件夹、解散文件夹时保留其中的 App，长按主屏幕空白处即可进入编辑。
 - 对支持 Metal 的 App 可使用“带 Metal 性能监控启动”。
+
+## 4.0 的新增内容（同步自上游）
+
+本构建已整体并入上游 [huzaifahshahid71-ops/Strata](https://github.com/huzaifahshahid71-ops/Strata) 的 4.0：
+
+- **六个界面**：除 iOS 主屏幕、影院模式、大屏模式外，新增切换台（Switchboard）、海报墙（Shelf）与街机（Arcade），均可用手柄导航。
+- **运行环境管理**：访客文件浏览、便携备份（创建 / 校验 / 恢复）、签名身份与钥匙串迁移集中在一处。
+- **自动续签**：按天数安排 SideStore 续签，到期提醒，并可配合「设置 VPN」快捷指令自动连接 LocalDevVPN。
+- **帧生成（实验性）**：2×/3×/4× 显示帧与帧率测量面板。
+- **存储索引**：重新扫描各访客容器并统计占用，可单独重算。
+- **内存悬浮窗**：实时显示 Strata、各 App 与各辅助进程的占用与上限。
+- **HostJIT 内联执行**：保留既有 iOS 启动、访客扩展 JIT 与多任务路径作为回退。
 
 ## 下载与安装
 
@@ -129,6 +141,19 @@ v17 已经能查到 bundle 了，但截图里 "Background Refresh"、"Health Che
 - 词表补到 **106 条**，把 `Date` / `Email` / `Name` / `Type` / `Source Name` / `Developer` / `Installed` / `YES` / `NO` / `stable` 这类字段名也纳入。
 
 包版本 **3.8.26**。
+
+
+### v19：同步上游 Strata 4.0
+
+按 `git merge` 把上游 `main`（`3221d76`，Release Strata 4.0）并入本分支，合并基线是共同祖先 v2.0.0：
+
+- **保留本分支独有的两件事**：Orbit 多任务层（独立 `Orbit/`，未与上游冲突）与简体中文汉化。
+- **解决 8 处冲突**：`LiveBoard` 新增的切换台 / 海报墙 / 街机三个界面补回 `.loc`；`LiveBoardHomeScreen` 采用上游重写的工具页；`StrataMemoryCapabilities` 采用上游的内存绕过提示并补 `.loc`；`LCAppModel` 恢复上游的 `fixBackgroundTaskIdentifiers`；`LCBootstrap` 保留上游的内存采样调用；`Info.plist` 版本定为 **4.0.0**。
+- **CI 仍是本仓库的一套**：`runs-on: macos-latest` + Xcode 26.2（上游用的是自建 `xcode-27` 标签），并保留中文词条合并步骤。
+- **新增 219 条中文词条**：工具页、运行环境、自动续签、帧生成、备份、身份与钥匙串、存储等 4.0 新界面全部补齐；`StrataToolsPage.Tool` 的标题是 `String`，必须显式 `.loc` 才会查表，已一并处理。
+- 修掉一处上游在 Swift 6 下的编译问题：`Task.detached` 返回 `NSDictionary` 不是 `Sendable`，闭包被推断成 `Void`，改为在任务内转成 `[[String: String]]`。
+
+包版本 **4.0.0**。
 
 
 ## JIT 与运存配置
