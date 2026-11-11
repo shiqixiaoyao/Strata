@@ -20,7 +20,7 @@ struct LCMultitaskSettingView: View {
     @AppStorage("LCHideCollapsedDock", store: LCUtils.appGroupUserDefault) var hideCollapsedDock: Bool = false
     @AppStorage("LCRedirectURLToHost", store: LCUtils.appGroupUserDefault) var redirectURLToHost = false
     @AppStorage("LCCornerFanEnabled", store: LCUtils.appGroupUserDefault) var cornerFanEnabled = true
-    @AppStorage("LCDesktopWindows", store: LCUtils.appGroupUserDefault) var desktopWindows = true
+    @AppStorage("LCDesktopWindows", store: LCUtils.appGroupUserDefault) var desktopWindows = false
     
     var body: some View {
         List {

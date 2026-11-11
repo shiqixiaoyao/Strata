@@ -10,6 +10,7 @@ static NSString *const EnabledKey=@"LCFloatingMenu.fullscreenMultitask";
 static NSString *const SystemMenuKey=@"LCFloatingMenu.systemMultitaskMenu";
 static NSString *const PreviousModeKey=@"LCFloatingMenu.previousMultitaskMode";
 static NSString *const AutoPiPKey=@"LCFloatingMenu.autoPiPApps";
+static NSString *const DesktopMigratedKey=@"LCDesktopWindows.v20.migrated";
 
 @interface LCOrbitTaskWindow : NSObject
 @property(nonatomic,weak) id window;
@@ -73,10 +74,29 @@ static void FinishLaunch(NSUUID *token,NSNumber *pid,NSError *error) {
         object:LCOrbitMultitask.class userInfo:@{@"error":error}];
 }
 @implementation LCOrbitMultitask
+// v19 把「桌面式多窗口」默认打开了，结果在部分设备上整个界面变成看得见却点不动：
+// Fullscreen() 一旦为假，Orbit 就不再接管窗口，可 LC 原生的窗口宿主并没有接住这批
+// scene，屏幕上留下一层谁都不响应的画面。v20 起该开关默认关闭（回到 v18 的接管行为），
+// 并且强制做一次迁移：把 v19 悄悄写进去的 YES 抹掉，否则这些设备升级上来还是点不动。
++ (void)prepareDesktopWindowsPreference {
+    NSUserDefaults *defaults=SharedDefaults();
+    if(!defaults) return;
+    // 1) v19 曾把这项默认打开，升级上来的设备必须强制抹平一次。
+    if(![defaults boolForKey:DesktopMigratedKey]) {
+        [defaults setBool:NO forKey:@"LCDesktopWindows"];
+        [defaults setBool:YES forKey:DesktopMigratedKey];
+    }
+    // 2) 桌面式多窗口只是「本次会话临时开启」：启动时一律清成关闭。
+    //    这套模式一旦让界面失去响应，用户强杀重开就自动回到安全模式，不用重装，
+    //    也不用担心开关留在 YES 里。要再试，去设置里重新打开即可。
+    if([defaults boolForKey:@"LCDesktopWindows"])
+        [defaults setBool:NO forKey:@"LCDesktopWindows"];
+}
 // 「桌面式多窗口」是 LC 设置里的开关，改动后要让窗口立刻回到窗口化布局，
 // 而不是等下次启动。refreshPresentation 定义在多任务 UI 里，用运行时查找避免头文件耦合。
 + (void)load {
     dispatch_async(dispatch_get_main_queue(), ^{
+        [self prepareDesktopWindowsPreference];
         [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification
                                                         object:nil
                                                          queue:NSOperationQueue.mainQueue
@@ -107,9 +127,11 @@ static void FinishLaunch(NSUUID *token,NSNumber *pid,NSError *error) {
 + (BOOL)usesSystemMenu { return [[LCOrbitStorage preferences] boolForKey:SystemMenuKey]; }
 // 桌面式多窗口：不再把当前窗口以外的任务隐藏，也不强制单窗口全屏，
 // 交给 LC 原生的可拖动 / 可缩放窗口同时留在屏幕上。
+// 注意默认必须是 NO。v19 默认 YES 的代价是：Fullscreen() 变假之后 Orbit 不再接管
+// 窗口，而 LC 原生的窗口宿主接不住这批 scene，屏幕上就剩一层看得见、点不动的画面。
 + (BOOL)desktopWindows {
     id value=SharedDefaults()?[SharedDefaults() objectForKey:@"LCDesktopWindows"]:nil;
-    return value?[value boolValue]:YES;
+    return value?[value boolValue]:NO;
 }
 + (BOOL)shouldShowFloatingMenu {
     id module=[[LCOrbitStorage preferences] objectForKey:@"LCOrbit.module.FloatingMenu.enabled"];

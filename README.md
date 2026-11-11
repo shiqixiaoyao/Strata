@@ -147,6 +147,25 @@ Multitasking becomes desktop-style:
 Bundle version **3.8.27**.
 
 
+### v20: fixing "everything looks fine but nothing responds"
+
+v19 turned desktop-style windows on by default. With `isManagingWindows` false, Orbit stopped
+managing windows, but LC's native window host did not pick those scenes up, which left a screen
+that renders correctly and swallows every tap. This release rolls that back:
+
+- Desktop-style windows is now **off by default**, restoring v18's window management. A one-time
+  migration clears the `YES` that v19 wrote.
+- The switch is now session-only: it is cleared on every launch, so if enabling it ever leaves the
+  UI unresponsive, force-quitting and reopening returns to safe mode without a reinstall.
+- The corner fan menu is purely additive now: the floating orb is **kept** by default
+  (`LCCornerFanKeepOrb` defaults to YES), so both entry points coexist.
+- Guards around the overlay: the full-screen panel area is only claimed while the fan is actually
+  on screen (`presenting` and the panel still in the view tree), reveal/dismiss each get a
+  fallback reset, and the trigger region shrank from 74x85 to 74x63 points.
+
+Bundle version **3.8.28**.
+
+
 ## JIT and RAM setup
 
 Import your own pairing record on the device, keep your working LocalDevVPN configuration, enable Developer Mode, and use JIT → Prepare device. Launch with JIT uses the existing guest runtime and a headless StikJIT helper. Script compatibility varies: Universal is selected automatically only for verified IDs; custom imports and per-app overrides remain available.

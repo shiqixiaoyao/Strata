@@ -487,7 +487,9 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 @implementation LCCornerFanRootView
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-    if (self.presenting) {
+    // 只有「扇形真的摊在屏幕上」时才接管整块面板区域。v19 这里只判断 presenting，
+    // 一旦动画被打断没把 presenting 复位，整块屏幕就被这层挡住，谁都点不动。
+    if (self.presenting && self.panel && self.panel.superview == self) {
         return [super hitTest:point withEvent:event];
     }
     if (!event || event.type != UIEventTypeTouches) {
@@ -495,11 +497,11 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     }
     CGFloat size = LCFanTriggerSize();
     BOOL inRight = [LCCornerFanMenu rightCornerEnabled] &&
-        point.x >= CGRectGetMaxX(self.bounds) - size * 1.15 &&
-        point.y >= CGRectGetMaxY(self.bounds) - size;
+        point.x >= CGRectGetMaxX(self.bounds) - size &&
+        point.y >= CGRectGetMaxY(self.bounds) - size * 0.85;
     BOOL inLeft = [LCCornerFanMenu leftCornerEnabled] &&
-        point.x <= CGRectGetMinX(self.bounds) + size * 1.15 &&
-        point.y >= CGRectGetMaxY(self.bounds) - size;
+        point.x <= CGRectGetMinX(self.bounds) + size &&
+        point.y >= CGRectGetMaxY(self.bounds) - size * 0.85;
     if (inRight || inLeft) {
         return self;
     }
@@ -563,7 +565,9 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 }
 
 + (BOOL)keepsOrb {
-    return LCFanFlag(LCFanKeepOrbKey, NO);
+    // v20 起默认保留悬浮球：扇形菜单是「多一个入口」，不是「换掉唯一入口」。
+    // 万一角落手势在某个机型上失灵，至少还有原来的球可以点。
+    return LCFanFlag(LCFanKeepOrbKey, YES);
 }
 
 + (BOOL)leftCornerEnabled {
@@ -593,6 +597,11 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     if (menu.window && menu.scene == scene) {
         menu.window.frame = scene.coordinateSpace.bounds;
         menu.rootView.frame = menu.window.bounds;
+        // 复用窗口时顺手清掉可能残留的拦截状态，避免覆盖层一直吃掉全屏触摸。
+        if (!menu.panel || menu.panel.superview != menu.rootView) {
+            menu.rootView.presenting = NO;
+            menu.rootView.panel = nil;
+        }
         return;
     }
     [menu buildWindowForScene:scene];
@@ -651,6 +660,7 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 - (void)tearDown {
     [self.panel removeFromSuperview];
     self.panel = nil;
+    self.rootView.panel = nil;
     self.rootView.presenting = NO;
     self.window.hidden = YES;
     self.window = nil;
@@ -706,14 +716,27 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     panel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.rootView addSubview:panel];
     self.panel = panel;
+    self.rootView.panel = panel;
     self.rootView.presenting = YES;
     [panel layoutIfNeeded];
     [panel reveal];
+    // 兜底：展开动画被打断（来电、切后台、面板被摘掉）时，presenting 若一直为 YES，
+    // 这一层就会把整屏触摸都吞掉。1.2 秒后自查一次，没东西在屏幕上就复位。
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.2 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        LCCornerFanMenu *strongSelf = weakSelf;
+        if (!strongSelf || !strongSelf.rootView) { return; }
+        if (strongSelf.panel && strongSelf.panel.superview == strongSelf.rootView) { return; }
+        strongSelf.rootView.presenting = NO;
+        strongSelf.rootView.panel = nil;
+    });
 }
 
 - (void)dismissFan:(void (^)(void))completion {
     if (!self.panel) {
         self.rootView.presenting = NO;
+        self.rootView.panel = nil;
         if (completion) {
             completion();
         }
@@ -724,10 +747,22 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
     [panel dismiss:^{
         [panel removeFromSuperview];
         self.rootView.presenting = NO;
+        self.rootView.panel = nil;
         if (completion) {
             completion();
         }
     }];
+    // dismiss: 的 completion 依赖动画收尾，动画被系统打断时不会回调。
+    // 这里再补一次复位，保证覆盖层不会永远停在「拦截全屏」的状态。
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        LCCornerFanMenu *strongSelf = weakSelf;
+        if (!strongSelf || !strongSelf.rootView) { return; }
+        [panel removeFromSuperview];
+        strongSelf.rootView.presenting = NO;
+        strongSelf.rootView.panel = nil;
+    });
 }
 
 - (void)launchApp:(NSDictionary *)app {

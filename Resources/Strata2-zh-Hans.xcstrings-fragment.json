@@ -2107,5 +2107,5 @@
   "lc.settings.strataInteraction": "交互方式",
   "lc.settings.cornerFan": "角落扇形菜单",
   "lc.settings.desktopWindows": "桌面式多窗口",
-  "lc.settings.strataInteraction.footer": "扇形菜单：从屏幕右下角斜向内上滑，滑到目标图标后松手即启动；如需保留原来的悬浮球，把「角落扇形菜单」关掉即可。桌面式多窗口：多个 App 以可拖动、可缩放的窗口同时留在屏幕上；关闭后恢复单窗口全屏。"
+  "lc.settings.strataInteraction.footer": "扇形菜单：从屏幕右下角斜向内上滑，滑到目标图标后松手即启动；悬浮球默认保留，两个入口并存。桌面式多窗口（实验）：多个 App 以可拖动、可缩放的窗口同时留在屏幕上，该模式重启后自动关闭——如果打开后界面点不动，强杀重开即可恢复。"
 }
