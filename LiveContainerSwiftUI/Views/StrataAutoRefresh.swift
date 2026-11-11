@@ -56,11 +56,13 @@ import Network
         guard StrataRefreshExpiry.shouldRemind(now: Date(), expiry: expiry, lastSuccess: lastSuccess, intervalDays: days) else { return }
         if let expiry {
             let hours = max(0, Int(expiry.timeIntervalSinceNow / 3600))
-            reminderMessage = hours < 48 ? "Strata's current signing expires in approximately \(hours) hours. Refresh now to keep it available." : "Your refresh interval is due. Strata's current signing expires \(expiry.formatted())."
+            reminderMessage = hours < 48
+                ? LCStr("Strata's current signing expires in approximately %@ hours. Refresh now to keep it available.", "Strata's current signing expires in approximately %@ hours. Refresh now to keep it available.", "\(hours)")
+                : LCStr("Your refresh interval is due. Strata's current signing expires %@.", "Your refresh interval is due. Strata's current signing expires %@.", expiry.formatted())
         } else {
             reminderMessage = "Your refresh interval is due. The installed expiry could not be read; check SideStore's expiry date."
         }
-        reminderMessage += defaults.bool(forKey: "StrataVPNAutomationSetupConfirmed") ? " Refresh runs Set VPN to connect LocalDevVPN and refresh through bundled SideStore." : " Set up the supplied Set VPN Shortcut once, then Refresh can connect LocalDevVPN and refresh through SideStore."
+        reminderMessage += " " + (defaults.bool(forKey: "StrataVPNAutomationSetupConfirmed") ? "Refresh runs Set VPN to connect LocalDevVPN and refresh through bundled SideStore.".loc : "Set up the supplied Set VPN Shortcut once, then Refresh can connect LocalDevVPN and refresh through SideStore.".loc)
         lastPrompt = Date(); showReminder = true
     }
     func snooze() { defaults.set(Date().addingTimeInterval(6 * 3600).timeIntervalSince1970, forKey: "StrataRefreshSnoozedUntil") }

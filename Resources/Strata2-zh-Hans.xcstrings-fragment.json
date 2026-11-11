@@ -2495,5 +2495,9 @@
   "Failed to determine team id.": "无法确定团队 ID。",
   "JIT": "JIT",
   "Unknown extension point": "未知扩展点",
-  "strata.phoneApps.shortcutTarget": "快捷指令 · %@"
+  "strata.phoneApps.shortcutTarget": "快捷指令 · %@",
+  "Strata's current signing expires in approximately %@ hours. Refresh now to keep it available.": "Strata 当前签名大约还能用 %@ 小时，现在刷新可保持可用。",
+  "Your refresh interval is due. Strata's current signing expires %@.": "刷新间隔已到。Strata 当前签名将于 %@ 到期。",
+  "Refresh runs Set VPN to connect LocalDevVPN and refresh through bundled SideStore.": "刷新会运行 Set VPN 连接 LocalDevVPN，并通过内置 SideStore 完成续签。",
+  "Set up the supplied Set VPN Shortcut once, then Refresh can connect LocalDevVPN and refresh through SideStore.": "只需配置一次随附的 Set VPN 快捷指令，之后刷新即可连接 LocalDevVPN 并通过 SideStore 续签。"
 }
