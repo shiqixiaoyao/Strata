@@ -115,6 +115,21 @@ SideStore 作为内置访客运行时，`Bundle.main` 被换成 `SideStoreApp.fr
 
 宿主机进程与其他访客 App 不受影响（词表与挂钩都以 framework 路径为开关）。包版本升到 **3.8.25**。
 
+### v18：把设置页那些写死在 storyboard 里的选项翻出来
+
+v17 已经能查到 bundle 了，但截图里 "Background Refresh"、"Health Check"、"View Error Log"、"Storage Explorer" 这些行依旧是英文，而同屏的说明文字却是中文。两个原因：
+
+1. **开关被 `dispatch_once` 锁死。** `LCGuestTextTranslationEnabled()` 用 `dispatch_once` 求值，而 `mainBundle` 是在 `main()` 之后才被换成 `SideStoreApp.framework` 的。第一次求值发生在替换之前（宿主自己的界面先跑），于是「不是访客」这个结论被永久缓存，词表钩子从此全部短路——这解释了为什么 v17 里一个字都没替换成功。
+2. **nib 解码不走 setter。** `Settings.storyboard` 里 `text="Background Refresh"` 这类静态 label，编译成 nib 后由 `initWithCoder:` 直接恢复，`setText:` 钩子根本没被调用。说明文字能变中文，是因为它们由 `SettingsViewController` 用 `NSLocalizedString` 动态赋值。
+
+这一版：
+
+- 开关改成「只缓存 true，false 每次都重算」，不再有先手锁死的问题。
+- 保留全部 setter 钩子，另加一条**视图树扫描**：`UIView.didMoveToWindow` 与 `UIViewController.viewWillAppear:` 触发时递归翻译 `UILabel`（含 `attributedText`）、`UIButton`（四种状态的 `title` 与 `attributedTitle`）、`UITextField` / `UISearchBar` 的 placeholder、`UISegmentedControl` 的分段标题，并顺带处理 `title` / `navigationItem.title` / `tabBarItem.title`。这样无论文字来自 nib 还是代码，都能落到词表。
+- 词表补到 **106 条**，把 `Date` / `Email` / `Name` / `Type` / `Source Name` / `Developer` / `Installed` / `YES` / `NO` / `stable` 这类字段名也纳入。
+
+包版本 **3.8.26**。
+
 
 ## JIT 与运存配置
 

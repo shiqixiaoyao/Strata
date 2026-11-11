@@ -115,6 +115,21 @@ When SideStore runs as the built-in guest, `Bundle.main` becomes `SideStoreApp.f
 
 Bundle version **3.8.25**.
 
+### v18: pulling the storyboard-baked settings rows into Chinese
+
+v17 got the bundle right, yet the same screenshot still showed "Background Refresh", "Health Check", "View Error Log" and "Storage Explorer" in English while the footnotes below them were Chinese. Two causes:
+
+1. **The gate was frozen by `dispatch_once`.** `LCGuestTextTranslationEnabled()` cached its first result, but `mainBundle` is only swapped to `SideStoreApp.framework` after `main()` runs — and the host's own UI sets labels before that. The very first call therefore cached "not a guest" forever, short-circuiting every hook. That is why v17 replaced exactly nothing.
+2. **nib decoding never calls the setters.** Static labels such as `text="Background Refresh"` are restored inside `initWithCoder:` when the compiled nib loads, so a `setText:` hook never fires. The footnotes were Chinese only because `SettingsViewController` assigns them in code via `NSLocalizedString`.
+
+This release:
+
+- The gate now caches only `true`; a `false` result is recomputed on every call.
+- All setter hooks stay, plus a **view-tree pass** driven by `UIView.didMoveToWindow` and `UIViewController.viewWillAppear:`. It walks `UILabel` (including `attributedText`), `UIButton` (titles and attributed titles for all four states), `UITextField` / `UISearchBar` placeholders, `UISegmentedControl` segments, and also fixes `title`, `navigationItem.title` and `tabBarItem.title`. Text now resolves through the glossary whether it came from a nib or from code.
+- The glossary grows to **106 entries**, adding field names such as `Date`, `Email`, `Name`, `Type`, `Source Name`, `Developer`, `Installed`, `YES`, `NO` and `stable`.
+
+Bundle version **3.8.26**.
+
 
 ## JIT and RAM setup
 

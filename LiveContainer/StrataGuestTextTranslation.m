@@ -93,6 +93,19 @@ static NSDictionary<NSString *, NSString *> *LCGuestTextMap(void) {
             @"Description": @"描述",
             @"Success": @"成功",
 
+            // MARK: - nib 里剩余的表头 / 字段名
+            @"Date": @"日期",
+            @"Email": @"邮箱",
+            @"Name": @"名称",
+            @"Source Name": @"源名称",
+            @"Type": @"类型",
+            @"Developer": @"开发者",
+            @"Installed": @"已安装",
+            @"YES": @"是",
+            @"NO": @"否",
+            @"stable": @"稳定版",
+            @"Classic games in your pocket": @"口袋里的经典游戏",
+
             // MARK: - 源
             @"Add Source": @"添加源",
             @"All Apps": @"全部 App",
@@ -133,13 +146,18 @@ static NSDictionary<NSString *, NSString *> *LCGuestTextMap(void) {
     return map;
 }
 
+// 注意：这里不能用 dispatch_once 缓存。LCBootstrap 是在 main() 之后才把 mainBundle
+// 换成 SideStoreApp.framework 的，如果第一次求值发生在替换之前，dispatch_once 会把
+// 「不是访客」这个结果永久锁死，钩子从此再也不生效（v17 就是这么失效的）。
 static BOOL LCGuestTextTranslationEnabled(void) {
-    static BOOL enabled;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        NSString *path = [NSBundle mainBundle].bundlePath ?: @"";
-        enabled = [path containsString:@"SideStoreApp.framework"];
-    });
+    static BOOL enabled = NO;
+    if (enabled) {
+        return YES;
+    }
+    NSString *path = [NSBundle mainBundle].bundlePath ?: @"";
+    if ([path containsString:@"SideStoreApp.framework"]) {
+        enabled = YES;
+    }
     return enabled;
 }
 
@@ -161,6 +179,104 @@ static void LCSwapInstanceMethod(Class cls, SEL original, SEL replacement) {
         method_exchangeImplementations(a, b);
     }
 }
+
+static NSString *LCAttributedReplacement(NSAttributedString *attributed) {
+    if (![attributed isKindOfClass:[NSAttributedString class]] || attributed.length == 0) {
+        return nil;
+    }
+    NSString *source = attributed.string;
+    NSString *translated = LCGuestTranslateText(source);
+    return [translated isEqualToString:source] ? nil : translated;
+}
+
+static NSAttributedString *LCAttributedWithText(NSAttributedString *attributed, NSString *text) {
+    NSDictionary *attributes = attributed.length > 0 ? [attributed attributesAtIndex:0 effectiveRange:NULL] : nil;
+    return [[NSAttributedString alloc] initWithString:text attributes:attributes];
+}
+
+static void LCTranslateViewTree(UIView *view, NSUInteger depth);
+
+// nib 解码出来的静态文字（storyboard 里写死的 label/button 标题）不会走 setter 钩子，
+// 所以再补一条「视图进窗口 / 控制器将出现时递归扫一遍」的路径。
+static void LCTranslateSingleView(UIView *view) {
+    if ([view isKindOfClass:[UILabel class]]) {
+        UILabel *label = (UILabel *)view;
+        NSString *text = label.text;
+        if (text.length > 0) {
+            NSString *translated = LCGuestTranslateText(text);
+            if (![translated isEqualToString:text]) {
+                label.text = translated;
+            }
+        }
+        NSAttributedString *attributed = label.attributedText;
+        NSString *replacement = LCAttributedReplacement(attributed);
+        if (replacement) {
+            label.attributedText = LCAttributedWithText(attributed, replacement);
+        }
+    } else if ([view isKindOfClass:[UIButton class]]) {
+        UIButton *button = (UIButton *)view;
+        const UIControlState states[] = {
+            UIControlStateNormal, UIControlStateHighlighted, UIControlStateSelected, UIControlStateDisabled
+        };
+        for (NSUInteger i = 0; i < sizeof(states) / sizeof(states[0]); i++) {
+            NSString *title = [button titleForState:states[i]];
+            if (title.length == 0) {
+                continue;
+            }
+            NSString *translated = LCGuestTranslateText(title);
+            if (![translated isEqualToString:title]) {
+                [button setTitle:translated forState:states[i]];
+            }
+        }
+        NSAttributedString *attributed = [button attributedTitleForState:UIControlStateNormal];
+        NSString *replacement = LCAttributedReplacement(attributed);
+        if (replacement) {
+            [button setAttributedTitle:LCAttributedWithText(attributed, replacement) forState:UIControlStateNormal];
+        }
+    } else if ([view isKindOfClass:[UITextField class]]) {
+        UITextField *field = (UITextField *)view;
+        NSString *placeholder = field.placeholder;
+        if (placeholder.length > 0) {
+            NSString *translated = LCGuestTranslateText(placeholder);
+            if (![translated isEqualToString:placeholder]) {
+                field.placeholder = translated;
+            }
+        }
+    } else if ([view isKindOfClass:[UISearchBar class]]) {
+        UISearchBar *bar = (UISearchBar *)view;
+        NSString *placeholder = bar.placeholder;
+        if (placeholder.length > 0) {
+            NSString *translated = LCGuestTranslateText(placeholder);
+            if (![translated isEqualToString:placeholder]) {
+                bar.placeholder = translated;
+            }
+        }
+    } else if ([view isKindOfClass:[UISegmentedControl class]]) {
+        UISegmentedControl *segmented = (UISegmentedControl *)view;
+        for (NSUInteger i = 0; i < segmented.numberOfSegments; i++) {
+            NSString *title = [segmented titleForSegmentAtIndex:i];
+            if (title.length == 0) {
+                continue;
+            }
+            NSString *translated = LCGuestTranslateText(title);
+            if (![translated isEqualToString:title]) {
+                [segmented setTitle:translated forSegmentAtIndex:i];
+            }
+        }
+    }
+}
+
+static void LCTranslateViewTree(UIView *view, NSUInteger depth) {
+    if (!view || depth > 24) {
+        return;
+    }
+    LCTranslateSingleView(view);
+    for (UIView *subview in view.subviews) {
+        LCTranslateViewTree(subview, depth + 1);
+    }
+}
+
+#pragma mark - setter 钩子（代码里动态设置的文案）
 
 @interface UILabel (StrataGuestText)
 - (void)lc_translate_setText:(NSString *)text;
@@ -198,6 +314,15 @@ static void LCSwapInstanceMethod(Class cls, SEL original, SEL replacement) {
 }
 @end
 
+@interface UIBarButtonItem (StrataGuestText)
+- (void)lc_translate_setTitle:(NSString *)title;
+@end
+@implementation UIBarButtonItem (StrataGuestText)
+- (void)lc_translate_setTitle:(NSString *)title {
+    [self lc_translate_setTitle:LCGuestTranslateText(title)];
+}
+@end
+
 @interface UIViewController (StrataGuestText)
 - (void)lc_translate_setTitle:(NSString *)title;
 @end
@@ -225,13 +350,60 @@ static void LCSwapInstanceMethod(Class cls, SEL original, SEL replacement) {
 }
 @end
 
+#pragma mark - 静态文字钩子（nib 解码不走 setter）
+
+@interface UIView (StrataGuestTextTree)
+- (void)lc_translate_didMoveToWindow;
+@end
+@implementation UIView (StrataGuestTextTree)
+- (void)lc_translate_didMoveToWindow {
+    [self lc_translate_didMoveToWindow];
+    if (self.window && LCGuestTextTranslationEnabled()) {
+        LCTranslateViewTree(self, 0);
+    }
+}
+@end
+
+@interface UIViewController (StrataGuestTextTree)
+- (void)lc_translate_viewWillAppear:(BOOL)animated;
+@end
+@implementation UIViewController (StrataGuestTextTree)
+- (void)lc_translate_viewWillAppear:(BOOL)animated {
+    [self lc_translate_viewWillAppear:animated];
+    if (!LCGuestTextTranslationEnabled()) {
+        return;
+    }
+    NSString *title = self.title;
+    NSString *translatedTitle = LCGuestTranslateText(title);
+    if (title.length > 0 && ![translatedTitle isEqualToString:title]) {
+        self.title = translatedTitle;
+    }
+    UINavigationItem *navigationItem = self.navigationItem;
+    NSString *navigationTitle = navigationItem.title;
+    NSString *translatedNavigationTitle = LCGuestTranslateText(navigationTitle);
+    if (navigationTitle.length > 0 && ![translatedNavigationTitle isEqualToString:navigationTitle]) {
+        navigationItem.title = translatedNavigationTitle;
+    }
+    UITabBarItem *tabBarItem = self.tabBarItem;
+    NSString *tabTitle = tabBarItem.title;
+    NSString *translatedTabTitle = LCGuestTranslateText(tabTitle);
+    if (tabTitle.length > 0 && ![translatedTabTitle isEqualToString:tabTitle]) {
+        tabBarItem.title = translatedTabTitle;
+    }
+    LCTranslateViewTree(self.view, 0);
+}
+@end
+
 __attribute__((constructor))
 static void LCInstallGuestTextTranslation(void) {
     LCSwapInstanceMethod([UILabel class], @selector(setText:), @selector(lc_translate_setText:));
     LCSwapInstanceMethod([UIButton class], @selector(setTitle:forState:), @selector(lc_translate_setTitle:forState:));
     LCSwapInstanceMethod([UITabBarItem class], @selector(setTitle:), @selector(lc_translate_setTitle:));
     LCSwapInstanceMethod([UINavigationItem class], @selector(setTitle:), @selector(lc_translate_setTitle:));
+    LCSwapInstanceMethod([UIBarButtonItem class], @selector(setTitle:), @selector(lc_translate_setTitle:));
     LCSwapInstanceMethod([UIViewController class], @selector(setTitle:), @selector(lc_translate_setTitle:));
     LCSwapInstanceMethod([UITextField class], @selector(setPlaceholder:), @selector(lc_translate_setPlaceholder:));
     LCSwapInstanceMethod([UISearchBar class], @selector(setPlaceholder:), @selector(lc_translate_setPlaceholder:));
+    LCSwapInstanceMethod([UIView class], @selector(didMoveToWindow), @selector(lc_translate_didMoveToWindow));
+    LCSwapInstanceMethod([UIViewController class], @selector(viewWillAppear:), @selector(lc_translate_viewWillAppear:));
 }
