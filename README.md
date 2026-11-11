@@ -79,7 +79,8 @@ Up to v13 only literal `Text("...")` sites were covered. `Text(ternary)`, `Strin
 - **ObjC**: the "App controls unavailable / Hide app strip / No open apps" strings in `StrataGuestControls` now use `NSLocalizedString`.
 - Three formatted strings (`"%lld apps"`, the clean-data-folder confirmation, and the move-folders completion note) used `.localizeWithFormat()`, whose compiler-extracted keys never matched the fragment and fell back to English; they now use fixed `LCStr` keys.
 - **Category chips**: LiveBoard's default categories (Games / Ports / Tools) keep their English keys as data, but the display path now goes through `.loc`, and `Ports` / `Tools` gained translations, so the chip row is fully Chinese.
-- Chinese strings grow from **1337 to 1451** (fragment 1005 → 1120 entries).
+- Two dead keys (`Other Entitlements`, `Version %@`) with no remaining call site were dropped.
+- Chinese strings grow from **1337 to 1452** (fragment 1005 → 1120 entries).
 
 The bundle version is **3.8.23**.
 
