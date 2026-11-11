@@ -2,6 +2,16 @@ import Foundation
 import AppIntents
 import Network
 
+// 这个文件编进 SideStoreSupport.framework，进程里的 Bundle.main 是宿主 App
+// （访客进程里是 SideStoreApp.framework），构建脚本会给两边都放一份中文表。
+private func strataLoc(_ key: String) -> String {
+    NSLocalizedString(key, comment: "")
+}
+
+private func strataLocFormat(_ key: String, _ args: CVarArg...) -> String {
+    String(format: NSLocalizedString(key, comment: ""), arguments: args)
+}
+
 @available(iOS 17, *)
 private enum StrataShortcutRefreshState {
     static var defaults: UserDefaults { UserDefaults(suiteName: LCSharedUtils.appGroupID()) ?? .standard }
@@ -36,13 +46,13 @@ public struct StrataScheduledRefreshIntent: AppIntent {
     public init() {}
     @MainActor public func perform() async throws -> some IntentResult & ReturnsValue<String> {
         let d = StrataShortcutRefreshState.defaults
-        guard StrataShortcutRefreshState.due() else { return .result(value: "Skipped: Strata refresh is not due, disabled or recently attempted.") }
-        guard await StrataAutomationNetwork.allowed() else { return .result(value: "Skipped: waiting for Wi-Fi; cellular attempts are disabled or network status is unavailable.") }
-        guard StrataShortcutRefreshState.due() else { return .result(value: "Skipped: another refresh started while checking the network.") }
-        guard UserDefaults.sideStoreExist() else { return .result(value: "Failed: bundled SideStore is unavailable.") }
+        guard StrataShortcutRefreshState.due() else { return .result(value: strataLoc("Skipped: Strata refresh is not due, disabled or recently attempted.")) }
+        guard await StrataAutomationNetwork.allowed() else { return .result(value: strataLoc("Skipped: waiting for Wi-Fi; cellular attempts are disabled or network status is unavailable.")) }
+        guard StrataShortcutRefreshState.due() else { return .result(value: strataLoc("Skipped: another refresh started while checking the network.")) }
+        guard UserDefaults.sideStoreExist() else { return .result(value: strataLoc("Failed: bundled SideStore is unavailable.")) }
         d.set(Date(), forKey: "StrataRefreshLastAttempt")
         d.set(Date().timeIntervalSince1970 + 360, forKey: "StrataShortcutRefreshRunningUntil")
-        d.set("Refreshing through Shortcuts and bundled SideStore…", forKey: "StrataRefreshStatus")
+        d.set(strataLoc("Refreshing through Shortcuts and bundled SideStore…"), forKey: "StrataRefreshStatus")
         defer { d.removeObject(forKey: "StrataShortcutRefreshRunningUntil") }
         let run = UUID().uuidString
         d.set(run, forKey: "StrataShortcutRefreshToken")
@@ -59,9 +69,9 @@ public struct StrataScheduledRefreshIntent: AppIntent {
             try await performIntentRefresh(identifier: "RefreshAllAppsWidgetIntent", mangledTypeName: "9SideStore26RefreshAllAppsWidgetIntentV", intentProgress: Progress(totalUnitCount: 100))
             try Task.checkCancellation()
             d.set(Date(), forKey: "StrataRefreshLastSuccess")
-            result = "Refreshed: SideStore confirmed all apps refreshed successfully."
+            result = strataLoc("Refreshed: SideStore confirmed all apps refreshed successfully.")
         } catch {
-            result = timedOut ? "Failed: SideStore refresh timed out. Check VPN, pairing and account status." : "Failed: " + error.localizedDescription
+            result = timedOut ? strataLoc("Failed: SideStore refresh timed out. Check VPN, pairing and account status.") : strataLocFormat("Failed: %@", error.localizedDescription)
         }
         d.set(result, forKey: "StrataRefreshStatus")
         return .result(value: result)

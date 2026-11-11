@@ -8,6 +8,17 @@
 import AppIntents
 import UIKit
 
+// 扩展是独立的 bundle：进程里 Bundle.main 就是 .appex 自己，主 App 的词条查不到。
+// 构建脚本会把主 App 编好的 Localizable.strings 复制进每个扩展，
+// 这里的查找才真正命中中文；查不到时按 key 原文回退。
+private func NSLoc(_ key: String) -> String {
+    NSLocalizedString(key, comment: "")
+}
+
+private func NSLocFormat(_ key: String, _ args: CVarArg...) -> String {
+    String(format: NSLocalizedString(key, comment: ""), arguments: args)
+}
+
 private struct LaunchAppExtensionError: LocalizedError {
     let message: String
     init(_ message: String) { self.message = message }
@@ -69,7 +80,7 @@ struct LaunchAppExtension: AppIntent {
                 LaunchAppExtension.ext = ext
             } catch {
                 NSLog("Failed to start extension \(error)")
-                throw LaunchAppExtensionError("Failed to start extension \(error). To use the Launch App shortcut, reinstall LiveContainer with LaunchAppExtension and ShareExtension installed. If you use SideStore, choose \"Keep App Extensions (Use Main Profile)\". If you use Impactor, choose \"Only Register Main Bundle\". For other sideloaders, select keep all extensions, i.e. DO NOT Remove any extension.")
+                throw LaunchAppExtensionError(NSLocFormat("Failed to start extension %@. To use the Launch App shortcut, reinstall LiveContainer with LaunchAppExtension and ShareExtension installed. If you use SideStore, choose \"Keep App Extensions (Use Main Profile)\". If you use Impactor, choose \"Only Register Main Bundle\". For other sideloaders, select keep all extensions, i.e. DO NOT Remove any extension.", "\(error)"))
             }
             
         }
@@ -89,14 +100,14 @@ struct LaunchAppExtension: AppIntent {
         }
         
         if !isLiveContainerURL && normalizedLaunchScheme != "sidestore" {
-            throw LaunchAppExtensionError("Not a livecontainer URL!")
+            throw LaunchAppExtensionError(NSLoc("Not a livecontainer URL!"))
         }
         
         guard
             let appGroupId = LCSharedUtils.appGroupID(),
             let lcSharedDefaults = UserDefaults(suiteName: appGroupId)
         else {
-            throw LaunchAppExtensionError("lcSharedDefaults failed to initialize, because no app group was found. Did you sign LiveContainer correctly?")
+            throw LaunchAppExtensionError(NSLoc("lcSharedDefaults failed to initialize, because no app group was found. Did you sign LiveContainer correctly?"))
         }
         
         if normalizedLaunchScheme == "sidestore" {
@@ -108,14 +119,14 @@ struct LaunchAppExtension: AppIntent {
         }
         
         if launchURL.host != "livecontainer-launch" {
-            throw LaunchAppExtensionError("Not a livecontainer launch URL!")
+            throw LaunchAppExtensionError(NSLoc("Not a livecontainer launch URL!"))
         }
 
         var bundleId: String? = nil
         var containerName: String? = nil
         var forceJIT: Bool = false
         guard var components = URLComponents(url: launchURL, resolvingAgainstBaseURL: false) else {
-            throw LaunchAppExtensionError("URLComponents failed to initialize.")
+            throw LaunchAppExtensionError(NSLoc("URLComponents failed to initialize."))
         }
         
         for queryItem in components.queryItems ?? [] {
@@ -132,7 +143,7 @@ struct LaunchAppExtension: AppIntent {
             }
         }
         guard let bundleId else {
-            throw LaunchAppExtensionError("No bundle-name parameter found.")
+            throw LaunchAppExtensionError(NSLoc("No bundle-name parameter found."))
         }
                 
         // resolve private Documents bookmark
@@ -167,12 +178,12 @@ struct LaunchAppExtension: AppIntent {
         // check if the app is locked/hidden/require JIT, if so we don't directly set keys in lcSharedDefaults
         let appInfoURL = appBundle.url(forResource: "LCAppInfo", withExtension: "plist")
         guard let appInfoURL else {
-            throw LaunchAppExtensionError("Failed to find AppInfo!")
+            throw LaunchAppExtensionError(NSLoc("Failed to find AppInfo!"))
         }
 
         let appInfo = try PropertyListSerialization.propertyList(from: try Data(contentsOf: appInfoURL), format: nil)
         guard let appInfo = appInfo as? [String:Any] else {
-            throw LaunchAppExtensionError("Failed to load AppInfo!")
+            throw LaunchAppExtensionError(NSLoc("Failed to load AppInfo!"))
         }
         let isHiden = appInfo["isHidden"] as? Bool ?? false
         let isLocked = appInfo["isLocked"] as? Bool ?? false
@@ -220,7 +231,7 @@ struct LaunchAppExtension: AppIntent {
 
         components.scheme = schemeToLaunch
         guard let newURL = components.url else {
-            throw LaunchAppExtensionError("unable to construct new url")
+            throw LaunchAppExtensionError(NSLoc("unable to construct new url"))
         }
 
         var launchOptions: [String: Any] = ["url": newURL]

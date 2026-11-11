@@ -6,6 +6,21 @@ brew install ldid
 # move lc to working folder
 mv "$archive_path.xcarchive/Products/Applications" Payload
 
+# 扩展（.appex）与 SideStoreSupport.framework 都是独立 bundle：进程里 Bundle.main 指向它们自己，
+# 而这些 bundle 里没有任何 .lproj，于是扩展界面只能显示 key 原文（String.loc 的 en 兜底还会踩空）。
+# 把主 App 编译出的中文表复制进去，扩展 UI 与 JSON 状态文案才走中文。en 也放一份作为兜底。
+APP_BUNDLE=./Payload/LiveContainer.app
+for bundle in "$APP_BUNDLE"/PlugIns/*.appex "$APP_BUNDLE"/Frameworks/SideStoreSupport.framework; do
+  [ -d "$bundle" ] || continue
+  for loc in zh-Hans en; do
+    mkdir -p "$bundle/$loc.lproj"
+    cp "$APP_BUNDLE/zh-Hans.lproj/Localizable.strings" "$bundle/$loc.lproj/Localizable.strings"
+    if [ -f "$APP_BUNDLE/zh-Hans.lproj/Localizable.stringsdict" ]; then
+      cp "$APP_BUNDLE/zh-Hans.lproj/Localizable.stringsdict" "$bundle/$loc.lproj/Localizable.stringsdict"
+    fi
+  done
+done
+
 # temporarily move sidestore support framrwork to tmp before zip
 mkdir tmp
 mv Payload/LiveContainer.app/Frameworks/SideStoreSupport.framework ./tmp
