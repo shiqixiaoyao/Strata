@@ -166,6 +166,24 @@ that renders correctly and swallows every tap. This release rolls that back:
 Bundle version **3.8.28**.
 
 
+### v21: both new interactions off by default
+
+Some devices still had an unresponsive screen after v20, so the problem is not only in the window
+management branch. v21 turns both features introduced by v19 off by default, letting the build
+behave exactly like v18 first:
+
+- The corner fan menu is off by default; upgrading clears any previous value once
+  (`LCCornerFan.v21.migrated`). With it off, **the overlay `UIWindow` is never created**, so it
+  plays no part in touch handling at all.
+- Overlay wake-ups are narrower: `NSUserDefaultsDidChangeNotification` used to rebuild the window
+  unconditionally on every preference write; now it only rebuilds when the switch itself changes.
+- `foregroundScene` follows the key window's scene first; `connectedScenes` is unordered, so the
+  old code could pick a different scene each call and tear the window down repeatedly.
+- Desktop-style windows stays off by default as in v20.
+
+Bundle version **3.8.29**.
+
+
 ## JIT and RAM setup
 
 Import your own pairing record on the device, keep your working LocalDevVPN configuration, enable Developer Mode, and use JIT → Prepare device. Launch with JIT uses the existing guest runtime and a headless StikJIT helper. Script compatibility varies: Universal is selected automatically only for verified IDs; custom imports and per-app overrides remain available.

@@ -24,6 +24,9 @@ static NSString *const LCFanRightKey = @"LCCornerFanRight";
 static NSString *const LCFanTriggerKey = @"LCCornerFanTrigger";
 static NSString *const LCFanAppsKey = @"LCCornerFanApps";
 
+// 只在「扇形开关本身」变化时才重建覆盖层，别被其它偏好的写入带着反复重建。
+static id LCFanLastEnabledFlag;
+
 static const NSInteger LCFanMaxItems = 8;
 static const CGFloat LCFanIconSize = 58.0;
 static const CGFloat LCFanMaxRadius = 152.0;
@@ -555,13 +558,15 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 + (BOOL)isEnabled {
     // 内置 SideStore 会把 mainBundle 整个换成 SideStoreApp.framework，此时
     // isHostUI 会变 NO。覆盖层一旦建立就按偏好决定去留，避免在访客运行期间被拆掉。
+    // v21 起默认关闭：这块覆盖层是独立 UIWindow，默认不建立它，
+    // 先把「界面点不动」彻底排除在外，要用的用户在设置里手动打开。
     if ([LCCornerFanMenu shared].window) {
-        return LCFanFlag(LCFanEnabledKey, YES);
+        return LCFanFlag(LCFanEnabledKey, NO);
     }
     if (![LCOrbitHost isHostUI]) {
         return NO;
     }
-    return LCFanFlag(LCFanEnabledKey, YES);
+    return LCFanFlag(LCFanEnabledKey, NO);
 }
 
 + (BOOL)keepsOrb {
@@ -620,6 +625,19 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 }
 
 - (UIWindowScene *)foregroundScene {
+    // connectedScenes 是无序集合：直接遍历「第一个前台 scene」会时好时坏地挑到不同的 scene，
+    // 于是每次调用都判定「scene 变了」并重建覆盖层。优先跟随 key window 的 scene。
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:[UIWindowScene class]]) {
+            continue;
+        }
+        UIWindowScene *windowScene = (UIWindowScene *)scene;
+        for (UIWindow *window in windowScene.windows) {
+            if (window.isKeyWindow && window.windowLevel == UIWindowLevelNormal) {
+                return windowScene;
+            }
+        }
+    }
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:[UIWindowScene class]]) {
             continue;
@@ -803,6 +821,14 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 
 + (void)load {
     dispatch_async(dispatch_get_main_queue(), ^{
+        // v19/v20 默认开着这块覆盖层，而它单独占一个 UIWindow。默认关掉更保险：
+        // 想在旧版本里被写进去的 YES 也一并抹平一次（同一个迁移键，只跑一次）。
+        NSUserDefaults *defaults = LCFanDefaults();
+        if (defaults && ![defaults boolForKey:@"LCCornerFan.v21.migrated"]) {
+            [defaults setBool:NO forKey:LCFanEnabledKey];
+            [defaults setBool:YES forKey:@"LCCornerFan.v21.migrated"];
+        }
+        LCFanLastEnabledFlag = defaults ? [defaults objectForKey:LCFanEnabledKey] : nil;
         [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification
                                                         object:nil
                                                          queue:NSOperationQueue.mainQueue
@@ -825,7 +851,13 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
                                                         object:nil
                                                          queue:NSOperationQueue.mainQueue
                                                     usingBlock:^(NSNotification *note) {
-            [LCCornerFanMenu installIfNeeded];
+            // 以前这里无条件调 installIfNeeded：LC 每次写偏好都会走到重建覆盖层的路上，
+            // 高频写入时就是在不停地拆窗口建窗口。现在只在开关值真的变了才动。
+            NSUserDefaults *current = LCFanDefaults();
+            id now = current ? [current objectForKey:LCFanEnabledKey] : nil;
+            if (now == LCFanLastEnabledFlag || [now isEqual:LCFanLastEnabledFlag]) { return; }
+            LCFanLastEnabledFlag = now;
+            [LCCornerFanMenu reload];
         }];
         [LCCornerFanMenu installIfNeeded];
     });
