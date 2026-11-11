@@ -285,7 +285,6 @@
   "strata.widget.calendar": "日历",
   "strata.widget.clock": "时钟",
   "strata.widget.photos": "照片",
-  "﻿Other Entitlements": "其他权限",
   "SideStore does not have detailed information for these entitlements.": "SideStore 没有这些权限的详细信息。",
   "Tap a permission to learn more.": "轻点某项权限可查看详情。",
   "Unknown": "未知",
@@ -701,7 +700,6 @@
   "Storage Explorer": "存储浏览器",
   "App Storage Used:": "App 已用空间：",
   "Available Space:": "可用空间：",
-  "﻿Version %@": "版本 %@",
   "Expires in": "剩余有效期",
   "App Refresh Tip": "App 刷新提示",
   "New Update Available": "有新版本可用",
@@ -1115,5 +1113,8 @@
   "Hide app strip": "隐藏 App 条",
   "No open apps": "没有打开的 App",
   "sign": "签名",
-  "add": "添加"
+  "add": "添加",
+  "strata.appList.appCounter": "%lld 个 App",
+  "strata.settings.cleanDataFolderConfirm": "将从容器中永久删除 %lld 个 App 的数据文件夹，此操作无法撤销。",
+  "strata.settings.moveDanglingFolderComplete": "已移动 %lld 个数据文件夹与 %lld 个插件文件夹。"
 }

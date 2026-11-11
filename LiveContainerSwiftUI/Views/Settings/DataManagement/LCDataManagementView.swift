@@ -143,7 +143,7 @@ struct LCDataManagementView : View {
             }
         } message: {
             if folderRemoveCount > 0 {
-                Text("lc.settings.cleanDataFolderConfirm %lld".localizeWithFormat(folderRemoveCount))
+                Text(LCStr("strata.settings.cleanDataFolderConfirm", "This permanently deletes the data folders of %lld apps from the container. This cannot be undone.", folderRemoveCount))
             } else {
                 Text("lc.settings.noDataFolderToClean".loc)
             }
@@ -397,7 +397,7 @@ struct LCDataManagementView : View {
                 try fm.moveItem(at: LCPath.lcGroupTweakPath.appendingPathComponent(tweakFolderInUse), to: LCPath.tweakPath.appendingPathComponent(tweakFolderInUse))
                 movedTweakFolderCount += 1
             }
-            successInfo = "lc.settings.moveDanglingFolderComplete %lld %lld".localizeWithFormat(movedDataFolderCount,movedTweakFolderCount)
+            successInfo = LCStr("strata.settings.moveDanglingFolderComplete", "Moved %lld data folders and %lld tweak folders.", movedDataFolderCount, movedTweakFolderCount)
             successShow = true
             
         } catch {
