@@ -314,7 +314,7 @@ struct LiveBoardHomeScreen: View {
                 }
                 Menu("Move to Page") {
                     ForEach(layout.pages.indices, id: \.self) { target in
-                        Button("Page \(target + 1)") { layout.place(widget.id, on: target); page = target + 1 }
+                        Button(LCStr("strata.home.page %lld", "Page %lld", target + 1)) { layout.place(widget.id, on: target); page = target + 1 }
                     }
                 }
         Button("Edit Home Screen", systemImage: "square.grid.3x3") { editing = true }
@@ -326,7 +326,7 @@ struct LiveBoardHomeScreen: View {
                     Button { removeHomeWidget(widget.id) } label: {
                         Image(systemName: "minus").font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
                             .frame(width: 24, height: 24).liveBoardGlass(radius: 12)
-                    }.offset(x: -7, y: -7).accessibilityLabel("Remove \(widget.kind.title) widget").accessibilityIdentifier("home.widget.remove.\(widget.id)")
+                    }.offset(x: -7, y: -7).accessibilityLabel(LCStr("strata.home.removeWidget %@", "Remove %@ widget", widget.kind.title)).accessibilityIdentifier("home.widget.remove.\(widget.id)")
                 }
             }
             .onDrag { NSItemProvider(object: widget.id as NSString) }
@@ -350,7 +350,7 @@ struct LiveBoardHomeScreen: View {
                             Image(systemName: "minus").font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(.white).frame(width: 24, height: 24)
                                 .liveBoardGlass(radius: 12)
-                        }.offset(x: -7, y: -7).accessibilityLabel("Remove \(title(key)) from Home Screen")
+                        }.offset(x: -7, y: -7).accessibilityLabel(LCStr("strata.home.removeFromHome %@", "Remove %@ from Home Screen", title(key)))
                     }
                 }
             }
@@ -511,7 +511,7 @@ struct LiveBoardHomeScreen: View {
             Button("Remove Folder", systemImage: "folder.badge.minus", role: .destructive) { layout.dissolveFolder(folder.id); reconcile() }
         }
         .onDrop(of: [UTType.text], isTargeted: nil) { providers in acceptDrop(providers) { key in layout.put(key, in: folder.id); reconcile() } }
-        .accessibilityLabel("\(folder.name), folder, \(folder.apps.count) apps")
+        .accessibilityLabel(LCStr("strata.home.folderSummary %@ %lld", "%@, folder, %lld apps", folder.name, folder.apps.count))
     }
 
     private func folderOverlay(_ folder: LiveBoardHomeLayout.Folder, width: CGFloat) -> some View {
@@ -728,7 +728,7 @@ struct LiveBoardHomeScreen: View {
                         Text(item.name).font(.caption).lineLimit(1)
                         Label(item.live ? "LIVE" : "STATIC", systemImage: item.live ? "play.circle" : "photo").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
                     }
-                }.buttonStyle(.plain).accessibilityLabel("Apply \(item.name), \(item.live ? "live" : "static") wallpaper")
+                }.buttonStyle(.plain).accessibilityLabel(LCStr("strata.home.applyWallpaper %@ %@", "Apply %@, %@ wallpaper", item.name, item.live ? "live".loc : "static".loc))
             }
         }.padding(.vertical, 8)
     }
@@ -913,10 +913,10 @@ struct LiveBoardHomeScreen: View {
                             }
                             Spacer()
                             Button { page = index + 1; managingPages = false } label: { Image(systemName: page == index + 1 ? "checkmark.circle.fill" : "circle") }
-                                .accessibilityLabel("Show page \(index + 1)")
+                                .accessibilityLabel(LCStr("strata.home.showPage %lld", "Show page %lld", index + 1))
                             Button(role: .destructive) { removingPage = index; showingRemovePage = true } label: { Image(systemName: "minus.circle.fill").padding(6) }
                                 .disabled(layout.pages.count <= 1)
-                                .accessibilityLabel("Remove page \(index + 1)").accessibilityIdentifier("home.removePage.\(index)")
+                                .accessibilityLabel(LCStr("strata.home.removePage %lld", "Remove page %lld", index + 1)).accessibilityIdentifier("home.removePage.\(index)")
                         }.buttonStyle(.borderless)
                     }
                 } footer: { Text("Keep at least one Home page. Removing a page sends its apps to the App Library and removes its widgets.") }
@@ -924,7 +924,7 @@ struct LiveBoardHomeScreen: View {
             }
             .navigationTitle("Home Pages").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { managingPages = false } } }
-            .confirmationDialog("Remove Page \((removingPage ?? 0) + 1)?", isPresented: $showingRemovePage, titleVisibility: .visible, presenting: removingPage) { index in
+            .confirmationDialog(LCStr("strata.home.removePageConfirm %lld", "Remove Page %lld?", (removingPage ?? 0) + 1), isPresented: $showingRemovePage, titleVisibility: .visible, presenting: removingPage) { index in
                 Button("Remove Page", role: .destructive) {
                     var updated = layout
                     let removed = updated.removePage(at: index)

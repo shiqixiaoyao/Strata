@@ -2499,5 +2499,21 @@
   "Strata's current signing expires in approximately %@ hours. Refresh now to keep it available.": "Strata 当前签名大约还能用 %@ 小时，现在刷新可保持可用。",
   "Your refresh interval is due. Strata's current signing expires %@.": "刷新间隔已到。Strata 当前签名将于 %@ 到期。",
   "Refresh runs Set VPN to connect LocalDevVPN and refresh through bundled SideStore.": "刷新会运行 Set VPN 连接 LocalDevVPN，并通过内置 SideStore 完成续签。",
-  "Set up the supplied Set VPN Shortcut once, then Refresh can connect LocalDevVPN and refresh through SideStore.": "只需配置一次随附的 Set VPN 快捷指令，之后刷新即可连接 LocalDevVPN 并通过 SideStore 续签。"
+  "Set up the supplied Set VPN Shortcut once, then Refresh can connect LocalDevVPN and refresh through SideStore.": "只需配置一次随附的 Set VPN 快捷指令，之后刷新即可连接 LocalDevVPN 并通过 SideStore 续签。",
+  "strata.memory.availableToStrata %@": "Strata 当前可用：%@ MB",
+  "strata.memory.pid %@": "进程号：%@",
+  "strata.memory.availableToGuest %@": "采样时运行中 App 可用：%@ MB",
+  "strata.memory.usedByGuest %@": "采样时运行中 App 已用：%@ MB",
+  "strata.home.page %lld": "第 %lld 页",
+  "strata.home.removeWidget %@": "移除「%@」小组件",
+  "strata.home.removeFromHome %@": "从主屏幕移除 %@",
+  "strata.home.showPage %lld": "显示第 %lld 页",
+  "strata.home.removePage %lld": "移除第 %lld 页",
+  "strata.home.removePageConfirm %lld": "移除第 %lld 页？",
+  "strata.identity.fingerprint %@": "身份指纹\n%@",
+  "strata.gallery.showApp %@": "显示 %@",
+  "strata.home.folderSummary %@ %lld": "%@，文件夹，%lld 个 App",
+  "strata.home.applyWallpaper %@ %@": "应用 %@，%@壁纸",
+  "live": "动态",
+  "static": "静态"
 }

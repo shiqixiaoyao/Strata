@@ -26,7 +26,7 @@ struct StrataIdentitySettings: View {
                         if expiry < Date() { Label("Expired — import a current identity", systemImage: "exclamationmark.triangle").foregroundStyle(.orange) }
                     }
                     if metadata["expires"] == nil { Text("Certificate expiry could not be read by the native parser. Verify validity in SideStore before use.").font(.caption).foregroundStyle(.secondary) }
-                    Text("Identity fingerprint\n\(fingerprint)").font(.caption.monospaced()).textSelection(.enabled)
+                    Text(LCStr("strata.identity.fingerprint %@", "Identity fingerprint\n%@", fingerprint)).font(.caption.monospaced()).textSelection(.enabled)
                     if !secured { Button("Move existing identity to Keychain") { adoptExisting() } }
                     Button("Remove signing identity", role: .destructive) { removing = true }
                 } else { Text("No signing identity imported.").foregroundStyle(.secondary) }

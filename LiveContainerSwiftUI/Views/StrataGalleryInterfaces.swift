@@ -385,7 +385,7 @@ struct StrataGalleryScreen: View {
                 }
                 Section("Hidden apps") {
                     ForEach(apps.filter { library.hidden.contains(liveBoardAppKey($0)) }, id: \.self) { app in
-                        Button("Show \(customization.name(app))") { update { _ = $0.hidden.remove(liveBoardAppKey(app)) } }
+                        Button(LCStr("strata.gallery.showApp %@", "Show %@", customization.name(app))) { update { _ = $0.hidden.remove(liveBoardAppKey(app)) } }
                     }
                 }
             }.navigationTitle("Library")
