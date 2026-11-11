@@ -48,14 +48,15 @@ static BOOL LCFanFlag(NSString *key, BOOL fallback) {
     return value ? [value boolValue] : fallback;
 }
 
+// 探针：供调试时快速确认覆盖层是否处于启用状态。
+static BOOL LCFanActive(void) {
+    return [LCCornerFanMenu isEnabled];
+}
+
 static CGFloat LCFanTriggerSize(void) {
     id value = LCFanObject(LCFanTriggerKey);
     CGFloat size = value ? [value doubleValue] : 74.0;
     return MIN(MAX(size, 40.0), 120.0);
-}
-
-static BOOL LCFanActive(void) {
-    return [LCCornerFanMenu isEnabled];
 }
 
 #pragma mark - 图标
@@ -550,6 +551,11 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
 }
 
 + (BOOL)isEnabled {
+    // 内置 SideStore 会把 mainBundle 整个换成 SideStoreApp.framework，此时
+    // isHostUI 会变 NO。覆盖层一旦建立就按偏好决定去留，避免在访客运行期间被拆掉。
+    if ([LCCornerFanMenu shared].window) {
+        return LCFanFlag(LCFanEnabledKey, YES);
+    }
     if (![LCOrbitHost isHostUI]) {
         return NO;
     }
@@ -768,7 +774,7 @@ static NSArray<NSDictionary *> *LCFanCandidateApps(void) {
                                                     usingBlock:^(NSNotification *note) {
             [LCCornerFanMenu installIfNeeded];
         }];
-        [NSNotificationCenter.defaultCenter addObserverForName:UIWindowSceneDidActivateNotification
+        [NSNotificationCenter.defaultCenter addObserverForName:UISceneDidActivateNotification
                                                         object:nil
                                                          queue:NSOperationQueue.mainQueue
                                                     usingBlock:^(NSNotification *note) {

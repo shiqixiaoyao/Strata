@@ -73,6 +73,28 @@ static void FinishLaunch(NSUUID *token,NSNumber *pid,NSError *error) {
         object:LCOrbitMultitask.class userInfo:@{@"error":error}];
 }
 @implementation LCOrbitMultitask
+// 「桌面式多窗口」是 LC 设置里的开关，改动后要让窗口立刻回到窗口化布局，
+// 而不是等下次启动。refreshPresentation 定义在多任务 UI 里，用运行时查找避免头文件耦合。
++ (void)load {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification
+                                                        object:nil
+                                                         queue:NSOperationQueue.mainQueue
+                                                    usingBlock:^(NSNotification *note) {
+            NSNumber *flag = SharedDefaults() ? [SharedDefaults() objectForKey:@"LCDesktopWindows"] : nil;
+            static NSNumber *last = nil;
+            static BOOL primed = NO;
+            if (!primed) { primed = YES; last = flag; return; }
+            if ((last == nil && flag != nil) || (last && ![last isEqual:flag])) {
+                last = flag;
+                SEL refresh = NSSelectorFromString(@"refreshPresentation");
+                if ([LCOrbitMultitask respondsToSelector:refresh])
+                    ((void (*)(id, SEL))objc_msgSend)(LCOrbitMultitask.class, refresh);
+            }
+        }];
+    });
+}
+
 + (BOOL)isEnabled {
     LCOrbitPreferences *defaults=[LCOrbitStorage preferences];
     id module=[defaults objectForKey:@"LCOrbit.module.FloatingMenu.enabled"];
