@@ -116,8 +116,14 @@ struct StrataInstalledAppPicker: View {
     }
     private func reload() async {
         loading = true
-        let result = await Task.detached(priority: .userInitiated) { LCUtils.strataPhoneApplications() }.value
-        let values = (result?["apps"] as? [[String: String]] ?? []).compactMap { value -> StrataInstalledPhoneApp? in
+        // NSDictionary 不是 Sendable，直接跨 Task 边界会让 Swift 6 把闭包推断成 Void。
+        // 在闭包里就地转成 [[String: String]] 再带出来。
+        let rows: [[String: String]] = await Task.detached(priority: .userInitiated) { () -> [[String: String]] in
+            guard let payload = LCUtils.strataPhoneApplications() as? [String: Any],
+                  let apps = payload["apps"] as? [[String: String]] else { return [] }
+            return apps
+        }.value
+        let values = rows.compactMap { value -> StrataInstalledPhoneApp? in
             guard let id = value["id"], let name = value["name"], StrataPhoneAppPolicy.validBundleIdentifier(id), id != Bundle.main.bundleIdentifier else { return nil }
             return .init(id: id, name: String(name.prefix(120)))
         }
@@ -125,7 +131,7 @@ struct StrataInstalledAppPicker: View {
         var merged = Dictionary(imported.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for app in values { merged[app.id] = app }
         apps = merged.values.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        let nativeIDs = Set(values.map(\.id))
+        let nativeIDs = Set(values.map { $0.id })
         importedCatalog = imported.contains { !nativeIDs.contains($0.id) }
         loading = false
     }
