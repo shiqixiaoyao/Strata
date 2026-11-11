@@ -5,9 +5,9 @@ private enum LiveBoardMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .ios: return "iOS Home"
-        case .cinematic: return "Cinematic"
-        case .bigPicture: return "Big Picture"
+        case .ios: return "iOS Home".loc
+        case .cinematic: return "Cinematic".loc
+        case .bigPicture: return "Big Picture".loc
         }
     }
     var symbol: String {
@@ -19,9 +19,9 @@ private enum LiveBoardMode: String, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
-        case .ios: return "A familiar, compact app grid."
-        case .cinematic: return "A cinematic carousel with controller navigation."
-        case .bigPicture: return "A cover library with controller navigation."
+        case .ios: return "A familiar, compact app grid.".loc
+        case .cinematic: return "A cinematic carousel with controller navigation.".loc
+        case .bigPicture: return "A cover library with controller navigation.".loc
         }
     }
 }

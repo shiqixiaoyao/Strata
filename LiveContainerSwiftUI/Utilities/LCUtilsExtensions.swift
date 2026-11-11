@@ -180,7 +180,7 @@ extension LCUtils {
         case .ADP:
             return "ADP"
         default:
-            return "Unknown Store"
+            return "Unknown Store".loc
         }
     }
     

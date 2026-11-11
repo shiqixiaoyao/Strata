@@ -226,7 +226,7 @@ class LCAppModel: ObservableObject, Hashable {
         guard acquired else { return }
         defer { Task { await MainActor.run { self.isAppRunning = false } } }
         if appInfo.is32bit {
-            guard let delegate else { throw "App library is not ready to prepare the 32-bit runtime." }
+            guard let delegate else { throw "App library is not ready to prepare the 32-bit runtime.".loc }
             try await delegate.ensureBundled32BitRuntime(for: self)
         }
         if uiContainers.isEmpty {
@@ -249,7 +249,7 @@ class LCAppModel: ObservableObject, Hashable {
         let classicMode = appInfo.defaultClassicMode
         let builtInJIT = LCUtils.appGroupUserDefault.integer(forKey: "LCJITEnablerType") == JITEnablerType.BuiltIn.rawValue && (forceJIT ?? (appInfo.isJITNeeded || appInfo.is32bit))
         if builtInJIT && classicMode != 0 {
-            throw "Built-in JIT requires normal compatibility mode. Turn off Classic Mode for this app, then retry."
+            throw "Built-in JIT requires normal compatibility mode. Turn off Classic Mode for this app, then retry.".loc
         }
         let preferredMultitask = classicMode == 0 ? (multitask ?? (builtInJIT ? false : shouldLaunchInMultitaskMode)) : false
         // Keep the JIT target alive in a full-screen guest when normal presentation is requested.
@@ -322,7 +322,7 @@ class LCAppModel: ObservableObject, Hashable {
                     if let url = launchURLComp.url {
                         await UIApplication.shared.open(url)
                     } else {
-                        throw "Unable to build URL from launchURLComp???"
+                        throw "Unable to build URL from launchURLComp???".loc
                     }
                     return
                 }
@@ -361,7 +361,7 @@ class LCAppModel: ObservableObject, Hashable {
                             return
                         }
                         guard let pidNumber = pidNumber else {
-                            continuation.resume(throwing: "Failed to obtain PID from LiveProcess")
+                            continuation.resume(throwing: "Failed to obtain PID from LiveProcess".loc)
                             return
                         }
                         Task {

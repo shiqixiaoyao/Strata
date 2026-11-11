@@ -29,7 +29,7 @@
 
 Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与开发修订版 **25**。底层的包版本/标识保持不变，以兼容后续更新。IPA 中不包含个人签名凭据或配对记录。
 
-## 汉化构建（v11 → v13）
+## 汉化构建（v11 → v14）
 
 `zh-hans` 分支提供完整简体中文界面与中文 README。v11 在回退后的 v7 基础上做了两件事：
 
@@ -67,6 +67,19 @@ Strata 2.0 是产品发布名称；此构建基于 LiveContainer **3.8.11** 与�
 - 悬浮菜单设置里的「左横屏自适应」「锁定禁右横屏」两个开关随之移除（它们只是给上面的强制层打补丁），「保持屏幕常亮」保留。
 
 包版本提升到 **3.8.21**，中文文案共 **1337 条**。
+
+### v14：补齐 LiveBoard / JIT / 运存页的残留英文
+
+v13 之前只覆盖了「有明显的 `Text("...")` 字面量」这一层，`Text(三元表达式)`、`String` 变量、数组标签这些位置 **根本不会走本地化**，所以界面上仍残留大量英文。这次按显示路径逐类修掉：
+
+- **三元表达式**（`Text(a ? "X" : "Y")`、`Label(...)`、`Button(...)`）：全部改为 `"X".loc`。SwiftUI 的 `Text`/`Label`/`Button` 遇到 `String` 参数不走本地化，这是 LiveBoard 三套界面（影院模式 / 大屏模式 / 主屏）里英文的主要来源。
+- **`String` 赋值与返回值**：`LiveBoardMode.title/detail`、`StrataJITScriptMode.title`、`getStoreName()`、各处 `errorInfo = "..."`、`status = "..."`、`session.message = "..."`、`throw "..."` 统一走 `.loc`。
+- **数组字面量标签**：控制台操作菜单（`["Launch", "App settings", …][index]`）逐项本地化。
+- **带插值的提示**：改为 `LCStr("key", "fallback", args)` 固定 key，避免 Xcode 抽取键名漂移（新增 `strata.jit.guestAck` / `strata.memory.*` 等 9 个 key）。
+- **ObjC 侧**：`StrataGuestControls` 的「App 控制不可用 / 隐藏 App 条 / 没有打开的 App」改用 `NSLocalizedString`。
+- 中文文案 **1337 → 1452 条**（片段 1005 → 1117 项）。
+
+包版本提升到 **3.8.22**。
 
 
 ## JIT 与运存配置

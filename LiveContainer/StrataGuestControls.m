@@ -94,7 +94,7 @@
     } else [self request:@"library"];
 }
 - (void)showError:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"App controls unavailable" message:message preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"App controls unavailable", nil) message:message preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
     [self.panel.rootViewController presentViewController:alert animated:YES completion:nil];
 }
@@ -106,7 +106,7 @@
     if (symbol) config.image = [UIImage systemImageNamed:symbol];
     else config.title = title;
     config.contentInsets = NSDirectionalEdgeInsetsMake(8, 4, 8, 4);
-    button.accessibilityLabel = [title isEqualToString:@"⌄"] ? @"Hide app strip" : title;
+    button.accessibilityLabel = [title isEqualToString:@"⌄"] ? NSLocalizedString(@"Hide app strip", nil) : title;
     config.baseForegroundColor = UIColor.whiteColor;
     config.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
     button.configuration = config;
@@ -195,7 +195,7 @@
         [icons addArrangedSubview:icon];
     }
     if (entries.count == 0) {
-        UILabel *empty = [UILabel new]; empty.text = @"No open apps"; empty.numberOfLines = 2; empty.textAlignment = NSTextAlignmentCenter; empty.font = [UIFont systemFontOfSize:12]; empty.textColor = UIColor.secondaryLabelColor;
+        UILabel *empty = [UILabel new]; empty.text = NSLocalizedString(@"No open apps", nil); empty.numberOfLines = 2; empty.textAlignment = NSTextAlignmentCenter; empty.font = [UIFont systemFontOfSize:12]; empty.textColor = UIColor.secondaryLabelColor;
         [icons addArrangedSubview:empty];
     }
     [stack addArrangedSubview:[self button:@"Minimize" action:^{ [weakSelf request:@"minimize"]; }]];

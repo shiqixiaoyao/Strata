@@ -556,7 +556,7 @@ struct LCAppSettingsView: View {
             }
             
             guard let bookmark = LCUtils.bookmark(for: url) else {
-                errorInfo = "Unable to generate a bookmark for the selected URL!"
+                errorInfo = "Unable to generate a bookmark for the selected URL!".loc
                 errorShow = true
                 return
             }

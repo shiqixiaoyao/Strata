@@ -349,7 +349,7 @@ struct LiveBoardHomeScreen: View {
     }
 
     @ViewBuilder private func appMenu(_ key: String, app: LCAppModel) -> some View {
-        Button(app.strataSwitcherPinned ? "Unpin from app switcher" : "Pin to app switcher", systemImage: "pin") { app.strataSwitcherPinned.toggle() }
+        Button(app.strataSwitcherPinned ? "Unpin from app switcher".loc : "Pin to app switcher".loc, systemImage: "pin") { app.strataSwitcherPinned.toggle() }
         if let launchInGameMode { Button("Request Game Mode", systemImage: "gamecontroller.fill") { launchInGameMode(app) }.disabled(app.appInfo is BuiltInSideStoreAppInfo) }
         if let launchMultitask { Button("Multitask", systemImage: "rectangle.on.rectangle") { launchMultitask(app) }.disabled(app.appInfo is BuiltInSideStoreAppInfo) }
         if let launchWithMetalHUD { Button("Launch with Metal HUD", systemImage: "gauge.with.dots.needle.67percent") { launchWithMetalHUD(app) }.disabled(app.appInfo is BuiltInSideStoreAppInfo) }
@@ -358,7 +358,7 @@ struct LiveBoardHomeScreen: View {
         Button("Edit Home Screen", systemImage: "square.grid.3x3") { editing = true }
         Button("Rename", systemImage: "pencil") { renameValue = title(key); renameKey = key }
         Button("Change app icon", systemImage: "photo") { appearanceApp = LiveBoardAppearanceSelection(app: app) }
-        Button(favoriteKeys.contains(key) ? "Unfavorite" : "Favorite", systemImage: "star") {
+        Button(favoriteKeys.contains(key) ? "Unfavorite".loc : "Favorite".loc, systemImage: "star") {
             var values = favoriteKeys
             if values.contains(key) { values.removeAll { $0 == key } } else { values.append(key) }
             if let data = try? JSONEncoder().encode(values), let string = String(data: data, encoding: .utf8) { favorites = string }
@@ -529,10 +529,10 @@ struct LiveBoardHomeScreen: View {
                 Button(action: openInterface) { controlCard("Interface", detail: "iOS Home Screen", symbol: "square.grid.3x3.fill", wide: true) }
                 HStack(spacing: 16) {
                     Button { openTab(.sources) } label: {
-                        controlCard("lc.tabView.sources".loc, detail: secondaryInstance ? "Manage in primary instance" : "Discover & install", symbol: "books.vertical", wide: false)
+                        controlCard("lc.tabView.sources".loc, detail: secondaryInstance ? "Manage in primary instance".loc : "Discover & install".loc, symbol: "books.vertical", wide: false)
                     }.disabled(secondaryInstance).accessibilityIdentifier("home.controls.sources")
                     Button { openTab(.tweaks) } label: {
-                        controlCard("lc.tabView.tweaks".loc, detail: secondaryInstance ? "Manage in primary instance" : "App extensions", symbol: "wrench.and.screwdriver", wide: false)
+                        controlCard("lc.tabView.tweaks".loc, detail: secondaryInstance ? "Manage in primary instance".loc : "App extensions".loc, symbol: "wrench.and.screwdriver", wide: false)
                     }.disabled(secondaryInstance).accessibilityIdentifier("home.controls.tweaks")
                 }
                 HStack(spacing: 16) {
@@ -700,7 +700,7 @@ struct LiveBoardHomeScreen: View {
                             .frame(height: 135).frame(maxWidth: .infinity).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
                             .overlay(alignment: .topTrailing) { if selectedWallpaper == item.id && (wallpaperStyle == "catalogue" || wallpaperStyle == "photo") { Image(systemName: "checkmark.circle.fill").padding(6).foregroundStyle(.blue) } }
                         Text(item.name).font(.caption).lineLimit(1)
-                        Label(item.live ? "LIVE" : "STATIC", systemImage: item.live ? "play.circle" : "photo").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                        Label(item.live ? "LIVE".loc : "STATIC".loc, systemImage: item.live ? "play.circle" : "photo").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
                     }
                 }.buttonStyle(.plain).accessibilityLabel(LCStr("strata.home.wallpaperApplyA11y", "Apply %1$@, %2$@ wallpaper", item.name, item.live ? LCStr("strata.home.wallpaperLive", "live") : LCStr("strata.home.wallpaperStatic", "static")))
             }
@@ -1032,7 +1032,7 @@ private struct LiveBoardHomeIcon: View {
         .buttonStyle(LiveBoardHomePressStyle(reduceMotion: reduceMotion))
         .disabled(!editing && (app.isAppRunning || app.isSigningInProgress))
         .accessibilityLabel(title)
-        .accessibilityHint(editing ? "Drag to rearrange" : "Launch app. Touch and hold for more actions.")
+        .accessibilityHint(editing ? "Drag to rearrange".loc : "Launch app. Touch and hold for more actions.".loc)
 
     }
 }

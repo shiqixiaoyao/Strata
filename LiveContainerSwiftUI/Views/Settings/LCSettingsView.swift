@@ -691,7 +691,7 @@ struct LCSettingsView: View {
                 }
                 
                 guard let data = item as? Data else {
-                    errorInfo = "Failed to decode certificate data"
+                    errorInfo = "Failed to decode certificate data".loc
                     errorShow = true
                     return
                 }
@@ -728,7 +728,7 @@ struct LCSettingsView: View {
         }
         
         guard let url = URL(string: "\(storeScheme.lowercased())://certificate?callback_template=livecontainer%3A%2F%2Fcertificate%3Fcert%3D%24%28BASE64_CERT%29%26password%3D%24%28PASSWORD%29") else {
-            errorInfo = "Failed to initialize certificate import URL."
+            errorInfo = "Failed to initialize certificate import URL.".loc
             errorShow = true
             return
         }

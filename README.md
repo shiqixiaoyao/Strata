@@ -29,7 +29,7 @@ Get **Strata-2.0+SideStore.ipa** from [Releases](https://github.com/huzaifahshah
 
 Strata 2.0 is the product release name; this build uses the LiveContainer **3.8.11** base and development revision **25**. The underlying bundle version/identity are retained for update compatibility. The IPA does not contain personal signing credentials or pairing records.
 
-## Chinese build (v11 → v13)
+## Chinese build (v11 → v14)
 
 The `zh-hans` branch ships a fully localized Simplified Chinese UI and README. v11 does two things on top of the rolled-back v7 baseline:
 
@@ -67,6 +67,19 @@ The plugin shipped a global "orientation enforcement" layer; it is removed entir
 - The "left landscape adapt" and "ban right landscape" switches in the floating-menu settings are gone (they only patched the layer above); "Keep screen awake" stays.
 
 The bundle version is **3.8.21**, and **1337** Chinese strings are shipped.
+
+### v14: remaining English in LiveBoard, JIT and memory pages
+
+Up to v13 only literal `Text("...")` sites were covered. `Text(ternary)`, `String` variables and array labels **never go through localization**, so plenty of English was left on screen. This release fixes each display path:
+
+- **Ternary expressions** (`Text(a ? "X" : "Y")`, `Label(...)`, `Button(...)`): all now use `"X".loc`. SwiftUI's `Text`/`Label`/`Button` take a plain `String` without localization, which was the main source of English across the three LiveBoard interfaces (Cinematic / Big Picture / Home).
+- **`String` assignments and returns**: `LiveBoardMode.title/detail`, `StrataJITScriptMode.title`, `getStoreName()`, and every `errorInfo = "..."`, `status = "..."`, `session.message = "..."`, `throw "..."` now use `.loc`.
+- **Array labels**: the console action menu (`["Launch", "App settings", ...][index]`) is localized item by item.
+- **Interpolated messages**: switched to `LCStr("key", "fallback", args)` with fixed keys so extracted key names cannot drift (9 new keys: `strata.jit.guestAck`, `strata.memory.*`, ...).
+- **ObjC**: the "App controls unavailable / Hide app strip / No open apps" strings in `StrataGuestControls` now use `NSLocalizedString`.
+- Chinese strings grow from **1337 to 1452** (fragment 1005 → 1117 entries).
+
+The bundle version is **3.8.22**.
 
 
 ## JIT and RAM setup

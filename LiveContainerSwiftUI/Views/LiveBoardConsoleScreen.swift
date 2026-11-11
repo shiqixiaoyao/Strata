@@ -197,7 +197,7 @@ struct LiveBoardConsoleScreen: View {
                     activeCategory = nil
                     navigation.selectedIndex = 0
                 } label: {
-                    Text(index == 0 ? "Library" : "Favorites")
+                    Text(index == 0 ? "Library".loc : "Favorites".loc)
                         .font(.system(size: landscape ? 20 : 18, weight: (activeCategory == nil && favoritesOnly == (index == 1)) ? .semibold : .regular))
                         .foregroundStyle(.white.opacity((activeCategory == nil && favoritesOnly == (index == 1)) ? 1 : 0.5))
                         .fixedSize(horizontal: true, vertical: false)
@@ -295,7 +295,7 @@ struct LiveBoardConsoleScreen: View {
                             Button("Launch with JIT", systemImage: "bolt.fill") { navigation.selectedIndex = index; activate(app, forceJIT: true) }
                             if let launchMultitask { Button("Multitask", systemImage: "rectangle.on.rectangle") { Task { await launchMultitask(app) } } }
                             if let launchWithMetalHUD { Button("Launch with Metal HUD", systemImage: "gauge.with.dots.needle.67percent") { Task { await launchWithMetalHUD(app) } } }
-                            Button(app.strataSwitcherPinned ? "Unpin from app switcher" : "Pin to app switcher", systemImage: "pin") { app.strataSwitcherPinned.toggle() }
+                            Button(app.strataSwitcherPinned ? "Unpin from app switcher".loc : "Pin to app switcher".loc, systemImage: "pin") { app.strataSwitcherPinned.toggle() }
                             Button("App options", systemImage: "ellipsis") { navigation.selectedIndex = index; showDetails() }
                         }
                         .accessibilityLabel(appCustomization.name(app))
@@ -354,9 +354,9 @@ struct LiveBoardConsoleScreen: View {
         } else {
             VStack(alignment: .leading, spacing: 16) {
                 Spacer()
-                Text(favoritesOnly ? "Your favorites" : "Your library").font(.largeTitle.bold())
-                Text(favoritesOnly ? "Add favorites from an app’s options." : "Install your first app to get started.").foregroundStyle(.white.opacity(0.6))
-                Button(favoritesOnly ? "All apps" : "Manage apps") {
+                Text(favoritesOnly ? "Your favorites".loc : "Your library".loc).font(.largeTitle.bold())
+                Text(favoritesOnly ? "Add favorites from an app’s options.".loc : "Install your first app to get started.".loc).foregroundStyle(.white.opacity(0.6))
+                Button(favoritesOnly ? "All apps".loc : "Manage apps".loc) {
                     if favoritesOnly { favoritesOnly = false } else { controller.stop(); openManagement() }
                 }.buttonStyle(.bordered)
                 Spacer()
@@ -368,7 +368,7 @@ struct LiveBoardConsoleScreen: View {
                     Button { if !movingLaunchButton { activate(app) } } label: {
                         HStack(spacing: 9) {
                             if launching { ProgressView().tint(.white) } else { Image(systemName: "play.fill").font(.system(size: 14)) }
-                            Text(category(app) == "Games" ? "Play Game" : "Launch App").font(.system(size: 17, weight: .semibold))
+                            Text(category(app) == "Games" ? "Play Game".loc : "Launch App".loc).font(.system(size: 17, weight: .semibold))
                         }.frame(minWidth: 140, minHeight: 46)
                     }
                     .liveBoardGlass(radius: 23)
@@ -414,7 +414,7 @@ struct LiveBoardConsoleScreen: View {
     }
     private var footer: some View {
         HStack(spacing: 16) {
-            Text(bigPicture ? "STRATA / BIG PICTURE" : "STRATA / CINEMATIC")
+            Text(bigPicture ? "STRATA / BIG PICTURE".loc : "STRATA / CINEMATIC".loc)
                 .font(.system(size: 9, weight: .semibold)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
             Spacer(minLength: 0)
             if controller.connected {
@@ -435,7 +435,7 @@ struct LiveBoardConsoleScreen: View {
                                 Button { detailAction(index, app: app) } label: {
                                     HStack(spacing: 10) {
                                         Image(systemName: ["play.fill", "gearshape", "photo", "rectangle", "star", "arrow.counterclockwise", "rectangle.portrait", "eye.slash", "bolt.fill", "pencil", "gamecontroller.fill"][index]).frame(width: 24)
-                                        Text(["Launch", "App settings", "Choose landscape cover", "Choose background", favoriteKeys.contains(liveBoardAppKey(app)) ? "Remove favorite" : "Add favorite", "Reset artwork", "Choose portrait cover", "Hide in this mode", "Launch with JIT", "Rename / change app icon", "Request Game Mode"][index]).font(.system(size: 15))
+                                        Text(["Launch".loc, "App settings".loc, "Choose landscape cover".loc, "Choose background".loc, favoriteKeys.contains(liveBoardAppKey(app)) ? "Remove favorite".loc : "Add favorite".loc, "Reset artwork".loc, "Choose portrait cover".loc, "Hide in this mode".loc, "Launch with JIT".loc, "Rename / change app icon".loc, "Request Game Mode".loc][index]).font(.system(size: 15))
                                         Spacer(minLength: 0)
                                     }.padding(10).frame(minHeight: 40).background(detailsIndex == index ? .white.opacity(0.17) : .clear, in: RoundedRectangle(cornerRadius: 10))
                                 }.buttonStyle(.plain).id(index).accessibilityIdentifier("console.option.\(index)")

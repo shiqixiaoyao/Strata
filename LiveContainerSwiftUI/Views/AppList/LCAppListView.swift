@@ -173,7 +173,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Button(manageLibrary ? "Back to launcher" : "Manage apps") {
+                    Button(manageLibrary ? "Back to launcher".loc : "Manage apps".loc) {
                         manageLibrary.toggle()
                     }
                     LazyVStack {
@@ -600,7 +600,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
         if try await selectInstalled() { return }
         guard let bundled = Bundle.main.url(forResource: "LiveExec32", withExtension: "ipa", subdirectory: "BundledRuntime") else {
-            throw "The included LiveExec32 runtime is missing from this build."
+            throw "The included LiveExec32 runtime is missing from this build.".loc
         }
         installprogressVisible = true
         defer { installprogressVisible = false }
@@ -610,7 +610,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             if try await selectInstalled() { return }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
-        throw "LiveExec32 installation did not finish. Open Apps to check the runtime before retrying. JIT is still required for 32-bit apps."
+        throw "LiveExec32 installation did not finish. Open Apps to check the runtime before retrying. JIT is still required for 32-bit apps.".loc
     }
 
     func onAppear() {
@@ -1229,7 +1229,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             })
             guard started else {
                 kill(Int32(pid), SIGKILL)
-                errorInfo = "Another built-in JIT operation is still running. Finish or cancel it in JIT setup first."
+                errorInfo = "Another built-in JIT operation is still running. Finish or cancel it in JIT setup first.".loc
                 errorShow = true
                 return
             }
@@ -1254,7 +1254,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 Task { await openWebView(urlString: url.absoluteString) }
                             }
                         } else {
-                            errorInfo = "StosDebug is not found. Please install it first and switch it to shared app."
+                            errorInfo = "StosDebug is not found. Please install it first and switch it to shared app.".loc
                             errorShow = true
                             return
                         }
@@ -1275,7 +1275,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         }) {
                             Task { await openWebView(urlString: url.absoluteString) }
                         } else {
-                            errorInfo = "StikDebug is not found. Please install it first and switch it to shared app."
+                            errorInfo = "StikDebug is not found. Please install it first and switch it to shared app.".loc
                             errorShow = true
                             return
                         }

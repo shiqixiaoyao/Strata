@@ -728,7 +728,7 @@ class AppInfoProvider {
             return
         }
         
-        let appName = appInfo?.displayName() ?? "Unknown App"
+        let appName = appInfo?.displayName() ?? "Unknown App".loc
         let appModel = DockAppModel(appName: appName, appUUID: appUUID, appInfo: appInfo, view: view)
         
         DispatchQueue.main.async {

@@ -11,7 +11,7 @@ enum StrataPairingRecord {
               let identifier = plist["identifier"] as? String, !identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: privateKey),
               key.publicKey.rawRepresentation == publicKey else {
-            throw NSError(domain: "StrataJIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Choose a valid remote pairing file. A classic USB pairing file needs to be replaced with a remote pairing file."])
+            throw NSError(domain: "StrataJIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Choose a valid remote pairing file. A classic USB pairing file needs to be replaced with a remote pairing file.".loc])
         }
     }
 }

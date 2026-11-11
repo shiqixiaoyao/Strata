@@ -22,7 +22,7 @@ struct StrataWallpaper: Codable, Identifiable, Equatable {
         reload()
         recoverOrphans()
         let old = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("LiveBoard/wallpaper.jpg")
-        if items.isEmpty, FileManager.default.fileExists(atPath: old.path), let image = UIImage(contentsOfFile: old.path), let item = try? add(image: image, name: "Your photo") {
+        if items.isEmpty, FileManager.default.fileExists(atPath: old.path), let image = UIImage(contentsOfFile: old.path), let item = try? add(image: image, name: "Your photo".loc) {
             if LCUtils.appGroupUserDefault.string(forKey: "LiveBoardWallpaperStyle") == "photo" { LCUtils.appGroupUserDefault.set(item.id, forKey: "StrataSelectedWallpaper") }
         }
     }

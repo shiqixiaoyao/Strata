@@ -31,17 +31,17 @@ enum LiveBoardBuiltInJIT {
             let file = pairingURL.deletingLastPathComponent().appendingPathComponent("last-status.json")
             if let data = try? JSONSerialization.data(withJSONObject: status) { try? data.write(to: file, options: .atomic) }
         }
-        guard !busy else { report("Another JIT operation is already running."); return false }
+        guard !busy else { report("Another JIT operation is already running.".loc); return false }
         guard ["enable", "prepare", "reset"].contains(operation), operation != "enable" || (pid > 0 && pid != getpid()) else {
-            report("JIT requires a separate guest process."); return false
+            report("JIT requires a separate guest process.".loc); return false
         }
         busy = true
         defer { busy = false }
-        guard #available(iOS 17.4, *) else { report("Built-in JIT requires iOS 17.4 or later."); return false }
-        guard LCUtils.strataCanDebug() else { report("This installation lacks debugging permission (get-task-allow). Re-sign using a compatible signing method."); return false }
-        guard let data = try? Data(contentsOf: pairingURL) else { report("Import your pairing file in JIT setup first."); return false }
+        guard #available(iOS 17.4, *) else { report("Built-in JIT requires iOS 17.4 or later.".loc); return false }
+        guard LCUtils.strataCanDebug() else { report("This installation lacks debugging permission (get-task-allow). Re-sign using a compatible signing method.".loc); return false }
+        guard let data = try? Data(contentsOf: pairingURL) else { report("Import your pairing file in JIT setup first.".loc); return false }
         do { try StrataPairingRecord.validate(data) } catch { report(error.localizedDescription); return false }
-        guard let group = LCSharedUtils.appGroupID(), let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { report("The shared app container is unavailable."); return false }
+        guard let group = LCSharedUtils.appGroupID(), let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { report("The shared app container is unavailable.".loc); return false }
         let preferences = LCUtils.appGroupUserDefault
         let rawAddress = preferences.string(forKey: "StrataJITDeviceAddress") ?? "10.7.0.1"
         let address = rawAddress.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "/")[0]
@@ -49,7 +49,7 @@ enum LiveBoardBuiltInJIT {
         let portText = preferences.string(forKey: "StrataJITRemotePairPort") ?? "49152"
         guard octets.count == 4, octets.allSatisfy({ UInt8($0) != nil }),
               let port = UInt16(portText.trimmingCharacters(in: .whitespacesAndNewlines)), port > 0 else {
-            report("Enter a valid Device IP and remote pairing port in JIT setup."); return false
+            report("Enter a valid Device IP and remote pairing port in JIT setup.".loc); return false
         }
         let guestStatus = root.appendingPathComponent("Library/StrataJITGuest/\(pid).json")
         let acknowledgement = (try? Data(contentsOf: guestStatus)).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -63,10 +63,10 @@ enum LiveBoardBuiltInJIT {
             try? FileManager.default.removeItem(at: status)
         }
         do {
-            if operation == "enable" { report("Guest startup acknowledged: PID \(pid). Waiting guest will enter its runtime after debugger attachment.") }
+            if operation == "enable" { report(LCStr("strata.jit.guestAck", "Guest startup acknowledged: PID %lld. The waiting guest will enter its runtime after debugger attachment.", pid)) }
             helper = try LCUtils.strataStartJITHelper(["strataJIT": true, "group": group, "operation": operation, "token": token, "pid": pid, "pairing": data, "script": script ?? "", "deviceAddress": address, "remotePairPort": Int(port)])
-            guard helper != nil else { report("JIT helper unavailable. Reinstall keeping app extensions."); return false }
-            report("Preparing device. Keep LocalDevVPN connected and Developer Mode enabled.")
+            guard helper != nil else { report("JIT helper unavailable. Reinstall keeping app extensions.".loc); return false }
+            report("Preparing device. Keep LocalDevVPN connected and Developer Mode enabled.".loc)
             var lastMessage = ""
             let started = Date()
             let deadline = started.addingTimeInterval(300)
@@ -74,7 +74,7 @@ enum LiveBoardBuiltInJIT {
             var lastGuestMessage = ""
             while Date() < deadline || handoff.attached {
                 if handoff.attached, kill(pid, 0) != 0, errno == ESRCH {
-                    report("Guest process exited; debugger session closed.")
+                    report("Guest process exited; debugger session closed.".loc)
                     return false
                 }
                 try Task.checkCancellation()
@@ -83,11 +83,11 @@ enum LiveBoardBuiltInJIT {
                    record["token"] as? String == expectedToken,
                    (record["pid"] as? NSNumber)?.int32Value == pid {
                     if let message = record["message"] as? String, message != lastGuestMessage {
-                        report("Guest: " + message); lastGuestMessage = message
+                        report(LCStr("strata.jit.guestPrefix", "Guest: ") + message); lastGuestMessage = message
                     }
                     if handoff.accept(record) {
                         guestAttached = true
-                        report("Debugger attached. Opening the app while JIT preparation continues.")
+                        report("Debugger attached. Opening the app while JIT preparation continues.".loc)
                         onGuestAttached?()
                     }
                 }
@@ -103,13 +103,13 @@ enum LiveBoardBuiltInJIT {
                     }
                 }
                 if !receivedStatus && Date().timeIntervalSince(started) > 12 {
-                    report("The JIT helper did not start. Confirm this update was installed with all extensions kept, then retry. No device connection was attempted.")
+                    report("The JIT helper did not start. Confirm this update was installed with all extensions kept, then retry. No device connection was attempted.".loc)
                     return false
                 }
                 try await Task.sleep(nanoseconds: 200_000_000)
             }
-            report("JIT timed out. Check LocalDevVPN, pairing and Wi-Fi, then retry.")
-        } catch is CancellationError { report("JIT cancelled.") }
+            report("JIT timed out. Check LocalDevVPN, pairing and Wi-Fi, then retry.".loc)
+        } catch is CancellationError { report("JIT cancelled.".loc) }
         catch { report(error.localizedDescription) }
         return false
     }
@@ -124,7 +124,7 @@ enum LiveBoardBuiltInJIT {
     private var task: Task<Void, Never>?
     func start(_ operation: String) {
         guard !busy else { return }
-        busy = true; success = nil; message = "Starting…"
+        busy = true; success = nil; message = "Starting…".loc
         task = Task {
             success = await LiveBoardBuiltInJIT.enable(script: nil, operation: operation) { [weak self] in self?.message = $0 }
             busy = false
@@ -136,7 +136,7 @@ enum LiveBoardBuiltInJIT {
     func startLaunch(pid: Int32, script: String?, onGuestAttached: @escaping () -> Void,
                      progress: @escaping (String) -> Void, completion: @escaping (Bool) -> Void) -> Bool {
         guard !busy else { return false }
-        busy = true; success = nil; message = "Starting…"
+        busy = true; success = nil; message = "Starting…".loc
         task = Task {
             let result = await LiveBoardBuiltInJIT.enable(pid: pid, script: script, onGuestAttached: onGuestAttached) { [weak self] line in
                 self?.message = line
