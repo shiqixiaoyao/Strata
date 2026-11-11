@@ -79,10 +79,16 @@ static void FinishLaunch(NSUUID *token,NSNumber *pid,NSError *error) {
     return [LCOrbitHost isHostUI] && (!module || [module boolValue]) && [defaults boolForKey:EnabledKey];
 }
 + (BOOL)isManagingWindows {
-    return [self isEnabled] && ![self usesSystemMenu] && SharedDefaults() &&
+    return [self isEnabled] && ![self usesSystemMenu] && ![self desktopWindows] && SharedDefaults() &&
         [SharedDefaults() integerForKey:@"LCMultitaskMode"]==0;
 }
 + (BOOL)usesSystemMenu { return [[LCOrbitStorage preferences] boolForKey:SystemMenuKey]; }
+// 桌面式多窗口：不再把当前窗口以外的任务隐藏，也不强制单窗口全屏，
+// 交给 LC 原生的可拖动 / 可缩放窗口同时留在屏幕上。
++ (BOOL)desktopWindows {
+    id value=SharedDefaults()?[SharedDefaults() objectForKey:@"LCDesktopWindows"]:nil;
+    return value?[value boolValue]:YES;
+}
 + (BOOL)shouldShowFloatingMenu {
     id module=[[LCOrbitStorage preferences] objectForKey:@"LCOrbit.module.FloatingMenu.enabled"];
     return (!module || [module boolValue]) && !([self isEnabled] && [self usesSystemMenu]);

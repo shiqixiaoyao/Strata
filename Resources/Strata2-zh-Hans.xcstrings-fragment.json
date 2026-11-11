@@ -2103,5 +2103,9 @@
   "Your saved preference is **%lld**, but the provided pairing file is **%lld**.\n\nDo you want to switch and accept **%lld** as your current protocol?": "你保存的偏好是 **%lld**，但提供的配对文件是 **%lld**。\n\n是否切换并将 **%lld** 作为当前协议？",
   "Your saved preference is **%lld**, but the provided pairing file is **%lld**.\n\nDo you want to switch and accept **%lld** as your preferred protocol, or load it without changing your preference?": "你保存的偏好是 **%lld**，但提供的配对文件是 **%lld**。\n\n是否切换并将 **%lld** 设为首选协议，还是仅加载而不修改偏好？",
   "an app in source “%lld”": "源“%lld”中的一个 App",
-  "the bundle identifier %lld": "Bundle ID %lld"
+  "the bundle identifier %lld": "Bundle ID %lld",
+  "lc.settings.strataInteraction": "交互方式",
+  "lc.settings.cornerFan": "角落扇形菜单",
+  "lc.settings.desktopWindows": "桌面式多窗口",
+  "lc.settings.strataInteraction.footer": "扇形菜单：从屏幕右下角斜向内上滑，滑到目标图标后松手即启动；如需保留原来的悬浮球，把「角落扇形菜单」关掉即可。桌面式多窗口：多个 App 以可拖动、可缩放的窗口同时留在屏幕上；关闭后恢复单窗口全屏。"
 }

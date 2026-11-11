@@ -130,6 +130,22 @@ This release:
 
 Bundle version **3.8.26**.
 
+### v19: corner fan menu and desktop-style windows
+
+The launcher is rebuilt around Meizu Flyme's corner interaction (trigger region and radial geometry inspired by Mangi-11/FlymeFreeform):
+
+- Swipe diagonally up-inward from the bottom-right corner and a fan opens along a quarter arc with up to eight targets. Keep sliding to change the selection and release to launch it; pull back to the corner or release over empty space to cancel. Selection changes fire a light haptic.
+- The fan lists launchable apps and always ends with "LiveContainer" (back to the host UI) and "Menu" (opens the original drawer, where a long press reaches the Orbit settings).
+- The classic orb is hidden by default and replaced by the fan; set `LCCornerFanKeepOrb` to restore it. Left/right corner toggles, trigger size (`LCCornerFanTrigger`, 74pt by default) and the pinned list (`LCCornerFanApps`, an array of `identity` values) live in the `LCFloatingMenu` preference namespace.
+- The overlay only claims gestures that start in a corner: `hitTest` returns `nil` elsewhere so every other touch passes through, and `canBecomeKeyWindow` returns `NO` so it never steals the keyboard focus.
+
+Multitasking becomes desktop-style:
+
+- A new "desktop windows" switch (Settings -> Multitasking, on by default). When it is on, `LCOrbitMultitask.isManagingWindows` no longer holds: other tasks are not hidden and single-window fullscreen is not forced, so several apps stay on screen as LC's native draggable, resizable windows and the one you tap comes to the front.
+- Turning the switch off restores the previous single-window fullscreen behaviour; all of the existing fullscreen code is kept, it is just no longer forced.
+
+Bundle version **3.8.27**.
+
 
 ## JIT and RAM setup
 
