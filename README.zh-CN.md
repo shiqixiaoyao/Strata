@@ -84,6 +84,21 @@ v13 之前只覆盖了「有明显的 `Text("...")` 字面量」这一层，`Tex
 
 包版本提升到 **3.8.23**。
 
+### v16：把 SideStore 本体也翻成中文
+
+`+SideStore` 包里的 SideStore 是官方 nightly 预编译包，被 `dylibify` 转成 `SideStoreApp.framework` 注入，它**自身不带任何 `.lproj`**——直接把英文原文当作本地化键（`NSLocalizedString("Pledge")`、`Text("Provisioning Profiles")`），再回落到 `Bundle.main`。注入后 `Bundle.main` 就是 LiveContainer，因此主 bundle 的 `zh-Hans` 表对它同样生效，不必改预编译二进制。
+
+从 `LiveContainer/SideStore`（`LiveContainerSupport` 分支）源码扫出 1506 处界面文案，与已有中文表比对后补了 **828 条**，另生成 157 条 `%lld` 变体（SwiftUI 对整型插值生成的键是 `%lld` 而不是 `%@`）。覆盖：
+
+- **账户与登录**：两步验证、Anisette 服务器、ADI 设备端模拟、退出登录确认
+- **证书与描述文件**：创建/导入/吊销、私钥缺失、免费账户 1 张证书与 7 天有效期提示
+- **设备与 App ID**：注册设备、UDID、App 组、能力开关
+- **配对与隧道**：配对文件、LocalDevVPN、WireGuard 参数、EMProxy、Minimuxer
+- **源与 App**：源校验（哈希 / 体积 / Bundle ID）、市场 App、更新与刷新、3 App 限额提示
+- **日志与排查**：各子系统详细日志开关、原始转储、导出
+
+键名保留英文、只翻译文，因此按原文取键的 `String(formatted:)` 一类调用不受影响。包版本升到 **3.8.24**，中文文案 **1452 → 2437 条**。
+
 
 ## JIT 与运存配置
 

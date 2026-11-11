@@ -84,6 +84,21 @@ Up to v13 only literal `Text("...")` sites were covered. `Text(ternary)`, `Strin
 
 The bundle version is **3.8.23**.
 
+### v16: localizing SideStore itself
+
+The SideStore inside the `+SideStore` package is the official nightly build, converted by `dylibify` into `SideStoreApp.framework`. It ships **no `.lproj` at all** and uses the English copy as the localization key (`NSLocalizedString("Pledge")`, `Text("Provisioning Profiles")`), falling back to `Bundle.main` — which, once injected, is LiveContainer. The main bundle's `zh-Hans` table therefore applies without touching the prebuilt binary.
+
+Scanning `LiveContainer/SideStore` (`LiveContainerSupport`) yielded 1506 UI strings; 828 were missing from the table and are translated here, plus 157 `%lld` variants (SwiftUI derives `%lld`, not `%@`, for integer interpolation). Covered:
+
+- **Accounts and sign-in**: two-factor, Anisette servers, on-device ADI, sign-out confirmation
+- **Certificates and profiles**: create/import/revoke, missing private key, the free-account 1-certificate and 7-day limits
+- **Devices and App IDs**: device registration, UDID, app groups, capabilities
+- **Pairing and tunnels**: pairing files, LocalDevVPN, WireGuard parameters, EMProxy, Minimuxer
+- **Sources and apps**: source validation (hash / size / bundle ID), marketplace apps, refresh, the 3-app limit
+- **Logs and diagnostics**: per-subsystem verbose logging, raw dumps, exports
+
+Keys stay English so calls that localize by source text, such as `String(formatted:)`, keep working. Bundle version **3.8.24**; Chinese strings grow from **1452 to 2437**.
+
 
 ## JIT and RAM setup
 
