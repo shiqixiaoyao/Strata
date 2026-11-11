@@ -77,7 +77,7 @@ v13 之前只覆盖了「有明显的 `Text("...")` 字面量」这一层，`Tex
 - **数组字面量标签**：控制台操作菜单（`["Launch", "App settings", …][index]`）逐项本地化。
 - **带插值的提示**：改为 `LCStr("key", "fallback", args)` 固定 key，避免 Xcode 抽取键名漂移（新增 `strata.jit.guestAck` / `strata.memory.*` 等 9 个 key）。
 - **ObjC 侧**：`StrataGuestControls` 的「App 控制不可用 / 隐藏 App 条 / 没有打开的 App」改用 `NSLocalizedString`。
-- 中文文案 **1337 → 1452 条**（片段 1005 → 1117 项）。
+- 中文文案 **1337 → 1449 条**（片段 1005 → 1117 项）。
 
 包版本提升到 **3.8.22**。
 

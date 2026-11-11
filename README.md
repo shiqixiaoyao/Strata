@@ -77,7 +77,7 @@ Up to v13 only literal `Text("...")` sites were covered. `Text(ternary)`, `Strin
 - **Array labels**: the console action menu (`["Launch", "App settings", ...][index]`) is localized item by item.
 - **Interpolated messages**: switched to `LCStr("key", "fallback", args)` with fixed keys so extracted key names cannot drift (9 new keys: `strata.jit.guestAck`, `strata.memory.*`, ...).
 - **ObjC**: the "App controls unavailable / Hide app strip / No open apps" strings in `StrataGuestControls` now use `NSLocalizedString`.
-- Chinese strings grow from **1337 to 1452** (fragment 1005 → 1117 entries).
+- Chinese strings grow from **1337 to 1449** (fragment 1005 → 1117 entries).
 
 The bundle version is **3.8.22**.
 
