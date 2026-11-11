@@ -99,6 +99,22 @@ Scanning `LiveContainer/SideStore` (`LiveContainerSupport`) yielded 1506 UI stri
 
 Keys stay English so calls that localize by source text, such as `String(formatted:)`, keep working. Bundle version **3.8.24**; Chinese strings grow from **1452 to 2437**.
 
+### v17: making the SideStore translation actually take effect
+
+v16 shipped 828 SideStore strings into the host bundle's `zh-Hans` table, yet the device still showed English. The cause is in `LCBootstrap.m`:
+
+```objc
+NSBundle *appBundle = [[NSBundle alloc] initWithPathForMainBundle:bundlePath];  // = Frameworks/SideStoreApp.framework
+overwriteMainNSBundle(appBundle);   // replaces NSBundle.mainBundle process-wide
+```
+
+When SideStore runs as the built-in guest, `Bundle.main` becomes `SideStoreApp.framework`, and that framework contains **no `.lproj` at all**. Every `NSLocalizedString` and SwiftUI `Text` lookup therefore falls back to the English source text; the host bundle's table is never consulted. This release fixes both halves:
+
+1. **Ship the Chinese table inside the framework.** After injecting `SideStoreApp.framework`, `build_github.sh` copies the host bundle's `zh-Hans.lproj/Localizable.strings` (1452 Strata entries plus 985 SideStore entries) into the framework's `zh-Hans.lproj` **and** `en.lproj`. The second copy is a safety net: whichever localization iOS resolves, the result is Chinese rather than English.
+2. **Cover the text baked into storyboards.** The whole Settings screen, the onboarding flow and the tab bar are compiled into nibs (`Settings.storyboardc`, `Authentication.storyboardc`, `Main.storyboardc`) and never hit a localization lookup. `LiveContainer/StrataGuestTextTranslation.m` adds a small lookup layer over `UILabel.setText:`, `UIButton.setTitle:forState:`, `UITabBarItem.setTitle:`, `UINavigationItem.setTitle:`, `UIViewController.setTitle:`, `UITextField.setPlaceholder:` and `UISearchBar.setPlaceholder:`, covering 40+ settings rows, 20+ onboarding sentences, the tab bar and the My Apps screen. It is gated on the main bundle path containing `SideStoreApp.framework`, so the host app and every other guest stay untouched.
+
+Bundle version **3.8.25**.
+
 
 ## JIT and RAM setup
 

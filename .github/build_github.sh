@@ -53,6 +53,18 @@ mv ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore.dylib
 ldid -S"" ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore
 cp ./.github/sidelc/LCAppInfo.plist ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/
 
+# SideStore 访客进程里 NSBundle.mainBundle 会被换成 SideStoreApp.framework，
+# 而这个 framework 本身没有 .lproj，所以所有本地化查询都会回落到英文原文。
+# 把主 bundle 编译出的中文表复制进去（en 也放一份，避免语言解析回落到英文）。
+SIDESTORE_FW=./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework
+for loc in zh-Hans en; do
+  mkdir -p "$SIDESTORE_FW/$loc.lproj"
+  cp ./Payload/LiveContainer.app/zh-Hans.lproj/Localizable.strings "$SIDESTORE_FW/$loc.lproj/Localizable.strings"
+  if [ -f ./Payload/LiveContainer.app/zh-Hans.lproj/Localizable.stringsdict ]; then
+    cp ./Payload/LiveContainer.app/zh-Hans.lproj/Localizable.stringsdict "$SIDESTORE_FW/$loc.lproj/Localizable.stringsdict"
+  fi
+done
+
 # copy intents
 cp ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/Intents.intentdefinition ./Payload/LiveContainer.app/
 cp ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/ViewApp.intentdefinition ./Payload/LiveContainer.app/

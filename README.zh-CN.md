@@ -99,6 +99,22 @@ v13 之前只覆盖了「有明显的 `Text("...")` 字面量」这一层，`Tex
 
 键名保留英文、只翻译文，因此按原文取键的 `String(formatted:)` 一类调用不受影响。包版本升到 **3.8.24**，中文文案 **1452 → 2437 条**。
 
+### v17：让 SideStore 的中文真正生效
+
+v16 把 828 条 SideStore 文案写进了主 bundle 的 `zh-Hans`，但实机上仍是英文。原因在 `LCBootstrap.m`：
+
+```objc
+NSBundle *appBundle = [[NSBundle alloc] initWithPathForMainBundle:bundlePath];  // = Frameworks/SideStoreApp.framework
+overwriteMainNSBundle(appBundle);   // 把 NSBundle.mainBundle 整个替换掉
+```
+
+SideStore 作为内置访客运行时，`Bundle.main` 被换成 `SideStoreApp.framework`，而这个 framework 里**一个 `.lproj` 都没有**，所以 `NSLocalizedString` 与 SwiftUI 的 `Text` 全部回落到英文原文，主 bundle 的中文表根本不会被查询。这一版做了两件事：
+
+1. **打包时把中文表塞进 framework**：`build_github.sh` 在注入 `SideStoreApp.framework` 后，把主 bundle 的 `zh-Hans.lproj/Localizable.strings`（1452 条 Strata + 985 条 SideStore）复制到 framework 的 `zh-Hans.lproj` 和 `en.lproj`。后者是保险：任何语言解析路径都会落到中文，而不会退回英文。
+2. **补齐烧死在 storyboard 里的静态文字**：设置页整屏、启动引导、标签栏的文字并不走本地化查询，而是编译进 nib（`Settings.storyboardc` / `Authentication.storyboardc` / `Main.storyboardc`）。新增 `LiveContainer/StrataGuestTextTranslation.m`，只在 `mainBundle` 路径包含 `SideStoreApp.framework` 时生效，给 `UILabel.setText:` / `UIButton.setTitle:forState:` / `UITabBarItem.setTitle:` / `UINavigationItem.setTitle:` / `UIViewController.setTitle:` / `UITextField.setPlaceholder:` / `UISearchBar.setPlaceholder:` 挂一层词表替换，覆盖设置页 40 余行、登录引导 20 余句、标签栏与「我的 App」页面。
+
+宿主机进程与其他访客 App 不受影响（词表与挂钩都以 framework 路径为开关）。包版本升到 **3.8.25**。
+
 
 ## JIT 与运存配置
 
