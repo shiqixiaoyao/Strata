@@ -15,12 +15,13 @@ import LocalAuthentication
 /// 这里把 key 固定下来，中文译文由 `Resources/Strata2-zh-Hans.xcstrings-fragment.json` 在构建前合并进 catalog。
 /// `fallback` 是英文兜底文案，当 catalog 里没有该 key 时直接显示英文，避免把裸 key 暴露到界面上。
 func LCStr(_ key: String, _ fallback: String) -> String {
-    NSLocalizedString(key, value: fallback, comment: "")
+    let value = key.loc
+    return value == key ? fallback : value
 }
 
 /// 带格式参数的版本，`key` 对应的译文需包含相同数量的格式符（如 `%lld`、`%@`、`%1$@`）。
 func LCStr(_ key: String, _ fallback: String, _ args: CVarArg...) -> String {
-    String(format: NSLocalizedString(key, value: fallback, comment: ""), arguments: args)
+    String(format: LCStr(key, fallback), arguments: args)
 }
 
 extension LCUtils {

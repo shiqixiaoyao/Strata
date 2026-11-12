@@ -76,21 +76,7 @@ static Class _LSOpenConfigurationClass;
 
 @end
 
-NSBundle* lcMainBundle = nil;
-__attribute__((constructor))
-static void init(void) {
-    lcMainBundle = [NSBundle bundleWithURL:NSBundle.mainBundle.bundleURL.URLByDeletingLastPathComponent.URLByDeletingLastPathComponent];
-    NSLog(@"%@", lcMainBundle);
-}
-
-@interface NSUserDefaults(ShareExtension)
-+ (NSBundle*)lcMainBundle;
-@end
-
-@implementation NSUserDefaults(ShareExtension)
-
-+ (NSBundle*)lcMainBundle {
-    return lcMainBundle;
-}
-
-@end
+// 这里原来复制了 `lcMainBundle` 全局 + 一个同名 category 覆盖，
+// 只为了在扩展进程里把「宿主 App bundle」塞给 +lcMainBundle。
+// 现在统一由 Localization.m 的 +lcMainBundle 处理（lcMainBundle 为 nil 时按
+// .appex 结构上溯两级），扩展里不必再各自维护一份。

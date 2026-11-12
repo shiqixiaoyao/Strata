@@ -1,11 +1,5 @@
 import Foundation
 
-/// JIT 进度的文案在扩展进程里生成、由主 App 读取展示，
-/// 所以要在写入 JSON 之前就换成中文（扩展现在也带一份 Localizable.strings）。
-private func jitFormat(_ key: String, _ args: CVarArg...) -> String {
-    String(format: key.loc, arguments: args)
-}
-
 /// `String(describing:)` 会把枚举 case 名直接抛给用户，这里换成可读中文。
 private func jitStageText(_ stage: StikJIT.PreparationStage) -> String {
     switch stage {
@@ -14,9 +8,9 @@ private func jitStageText(_ stage: StikJIT.PreparationStage) -> String {
     case .checkingDDI:
         return "Checking the developer disk image…".loc
     case .downloadingDDI(let fraction, let status):
-        return jitFormat("Downloading the developer disk image: %d%% · %@", Int32(fraction * 100), status)
+        return String(format: "Downloading the developer disk image: %d%% · %@".loc, Int32(fraction * 100), status)
     case .mountingDDI(let fraction):
-        return jitFormat("Mounting the developer disk image: %d%%", Int32(fraction * 100))
+        return String(format: "Mounting the developer disk image: %d%%".loc, Int32(fraction * 100))
     case .verifyingDDI:
         return "Verifying the developer disk image…".loc
     case .ready:
@@ -74,7 +68,7 @@ enum StrataJITWorker {
                     throw NSError(domain: "StrataJIT", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid device endpoint.".loc])
                 }
                 let config = StikJIT.Configuration(deviceAddress: address, rsdPort: endpointPort)
-                report(jitFormat("Connecting to device at %@:%d…", address, Int32(endpointPort)))
+                report(String(format: "Connecting to device at %@:%d…".loc, address, Int32(endpointPort)))
                 let readiness = StikJIT.prepareDevice(pairingFile: pairing, paths: paths, configuration: config) { stage in
                     report(jitStageText(stage))
                 }
@@ -83,7 +77,7 @@ enum StrataJITWorker {
                 case .ready(let state):
                     if operation == "prepare" {
                         let txm = state.isTXMPresent.map { $0 ? "strata.jit.txm.present".loc : "strata.jit.txm.absent".loc } ?? "strata.jit.txm.unknown".loc
-                        report(jitFormat("Device ready. TXM/SPTM: %@", txm), done: true, success: true)
+                        report(String(format: "Device ready. TXM/SPTM: %@".loc, txm), done: true, success: true)
                         context.completeRequest(returningItems: nil)
                         return
                     }

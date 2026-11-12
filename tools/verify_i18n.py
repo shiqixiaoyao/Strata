@@ -58,23 +58,20 @@ def main() -> int:
 
     loc_pat = re.compile(r'"((?:[^"\\\n]|\\.){2,})"\.loc')
     lcstr_pat = re.compile(r'LCStr\(\s*"([^"\\\n]+)"')
-    # 扩展进程 / 框架里的固定 key 包装器（各自 bundle 里查表，不走编译器抽取）
-    helper_pat = re.compile(
-        r'(?:NSLocFormat|NSLoc|strataLocFormat|strataLoc|jitFormat)\(\s*"((?:[^"\\\n]|\\.){2,})"'
-    )
     empty_loc = re.compile(r'"\s*"\.loc')
 
     seen_loc = 0
-    seen_helper = 0
     for name, text in sources.items():
         for m in empty_loc.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             fail(f"{name}:{line} 出现空串 .loc")
 
         for m in loc_pat.finditer(text):
-            key = m.group(1)
-            if "\\(" in key:
+            raw = m.group(1)
+            if "\\(" in raw:
                 continue
+            # 源码里的引号写成 \"，词条里是裸引号
+            key = raw.replace('\\"', '"')
             seen_loc += 1
             value = zh.get(key)
             if value is None:
@@ -94,27 +91,12 @@ def main() -> int:
                 line = text.count("\n", 0, m.start()) + 1
                 fail(f"{name}:{line} LCStr 缺中文词条: {key!r}")
 
-        for m in helper_pat.finditer(text):
-            key = m.group(1).replace('\\"', '"')
-            if "\\(" in key:
-                continue
-            seen_helper += 1
-            value = zh.get(key)
-            line = text.count("\n", 0, m.start()) + 1
-            if value is None:
-                fail(f"{name}:{line} 固定 key 缺中文词条: {key!r}")
-            elif specifiers(key) != specifiers(value):
-                fail(
-                    f"{name}:{line} 格式符不一致 {key!r} -> {value!r}"
-                    f"（{specifiers(key)} vs {specifiers(value)}）"
-                )
-
     # 关键字含 %lld / %@ 的条目，中文译文必须保留同样的占位符
     for key, value in frag.items():
         if specifiers(key) and specifiers(key) != specifiers(value):
             fail(f"fragment 格式符不一致: {key!r} -> {value!r}")
 
-    print(f"检查 .loc 调用 {seen_loc} 处、固定 key {seen_helper} 处，词条合计 {len(zh)} 条")
+    print(f"检查 .loc 调用 {seen_loc} 处，词条合计 {len(zh)} 条")
     if fails:
         print(f"\nFAIL（{len(fails)} 项）")
         for item in fails[:60]:

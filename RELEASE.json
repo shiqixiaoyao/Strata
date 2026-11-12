@@ -1,7 +1,7 @@
 {
-  "version": "4.0.2",
-  "tag": "v4.0.2",
-  "developmentRevision": 59,
+  "version": "4.0.3",
+  "tag": "v4.0.3",
+  "developmentRevision": 60,
   "liveContainerBase": "nightly 9d6ea09",
   "sourceBase": "285f338b7713ce1f4c67addea9c60bf0121121c2",
   "previousRelease": "v3.0.0",

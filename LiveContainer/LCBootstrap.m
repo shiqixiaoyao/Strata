@@ -54,9 +54,8 @@ bool sideStoreExist = false;
 + (NSString *)lcAppUrlScheme {
     return lcAppUrlScheme;
 }
-+ (NSBundle *)lcMainBundle {
-    return lcMainBundle;
-}
+// +lcMainBundle 只有一份实现，在 Localization.m：它读上面的 lcMainBundle 全局，
+// 为 nil 时（扩展进程）按 .appex 结构自己推导宿主 App bundle。
 + (NSDictionary *)guestAppInfo {
     return guestAppInfo;
 }

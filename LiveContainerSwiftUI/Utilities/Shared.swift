@@ -159,31 +159,14 @@ class InputHelper : AlertHelper<String> {
 extension String: @retroactive Error {}
 extension String: @retroactive LocalizedError {
     public var errorDescription: String? { return self }
-        
-    private static var enBundle : Bundle? = {
-        let language = "en"
-        let path = Bundle.main.path(forResource:language, ofType: "lproj")
-        let bundle = Bundle(path: path!)
-        return bundle
-    }()
-    
-    var loc: String {
-        let message = NSLocalizedString(self, comment: "")
-        if message != self {
-            return message
-        }
 
-        if let forcedString = String.enBundle?.localizedString(forKey: self, value: nil, table: nil){
-            return forcedString
-        }else {
-            return self
-        }
-    }
-    
+    // `loc` 与 en 兜底都在 NSString(Localization) 里（LiveContainer/Localization.m），
+    // 通过桥接头暴露给 Swift。之前这里有一份 Swift 复制品，且 enBundle 用 `path!`
+    // 强制解包——扩展进程里没有 en.lproj 时会直接崩，现已合并到那一份实现。
     func localizeWithFormat(_ arguments: CVarArg...) -> String{
         String.localizedStringWithFormat(self.loc, arguments)
     }
-    
+
     func sanitizeNonACSII() -> String  {
         filter { $0.isASCII }
     }
