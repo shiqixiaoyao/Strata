@@ -5,6 +5,6 @@
   "liveContainerBase": "nightly 9d6ea09",
   "sourceBase": "285f338b7713ce1f4c67addea9c60bf0121121c2",
   "previousRelease": "v3.0.0",
-  "ipaSha256": "000d0f49ff31095238d1c5ddfc63332d93ba27f43cf05f74e43738d3a6710dc1",
+  "ipaSha256": "4eda3103d1d5eb016e13f32c4be60e97dbe0dc2e187fb7b1f8fb5970756b00df",
   "bundleVersionRetainedForCompatibility": true
 }
