@@ -5,6 +5,7 @@
   "liveContainerBase": "nightly 9d6ea09",
   "sourceBase": "285f338b7713ce1f4c67addea9c60bf0121121c2",
   "previousRelease": "v3.0.0",
-  "ipaSha256": "4eda3103d1d5eb016e13f32c4be60e97dbe0dc2e187fb7b1f8fb5970756b00df",
-  "bundleVersionRetainedForCompatibility": true
+  "ipaSha256": "c41eb7142e9e7cdc71e7075afd098dbfe5966809a378bda11da167d89d32fa75",
+  "bundleVersionRetainedForCompatibility": true,
+  "ipaSize": 38676621
 }
