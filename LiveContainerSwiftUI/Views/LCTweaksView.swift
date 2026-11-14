@@ -211,7 +211,10 @@ struct LCTweakFolderView : View {
                 renameFileInput.close(result: "")
             }
         )
-        .betterFileImporter(isPresented: $choosingTweak, types: [.dylib, .lcFramework, /*.deb*/], multiple: true, callback: { fileUrls in
+        // Strata: .dylib / .framework 没有在 Info.plist 里声明 UTI，文件 App 常把这类
+        // 文件判成 public.data，UIDocumentPicker 里会变灰选不中，表现为「导入不了」。
+        // 加上 .item 让所有文件都可选，再由 startInstallTweak 按扩展名过滤。
+        .betterFileImporter(isPresented: $choosingTweak, types: [.dylib, .lcFramework, .item], multiple: true, callback: { fileUrls in
             Task { await startInstallTweak(fileUrls) }
         }, onDismiss: {
             choosingTweak = false
@@ -373,8 +376,34 @@ struct LCTweakFolderView : View {
                 if(!fileUrl.isFileURL) {
                     throw "lc.tweakView.notFileError %@".localizeWithFormat(fileUrl.lastPathComponent)
                 }
-                let toPath = self.baseUrl.appendingPathComponent(fileUrl.lastPathComponent)
-                try fm.moveItem(at: fileUrl, to: toPath)
+                let ext = fileUrl.pathExtension.lowercased()
+                guard ["dylib", "framework"].contains(ext) else {
+                    errorInfo = LCStr("strata.tweak.unsupportedType", "Only .dylib or .framework files can be imported: %@", fileUrl.lastPathComponent)
+                    errorShow = true
+                    return
+                }
+                var toPath = self.baseUrl.appendingPathComponent(fileUrl.lastPathComponent)
+                if fm.fileExists(atPath: toPath.path) {
+                    let stem = (fileUrl.lastPathComponent as NSString).deletingPathExtension
+                    var index = 2
+                    while fm.fileExists(atPath: toPath.path) {
+                        toPath = self.baseUrl.appendingPathComponent("\(stem)-\(index).\(ext)")
+                        index += 1
+                    }
+                }
+                // 从「文件」App / 分享入口进来的 URL 是只读的安全作用域资源，
+                // moveItem 会失败；改为先取得访问权再 copyItem。
+                let needsScope = fileUrl.startAccessingSecurityScopedResource()
+                do {
+                    if fm.fileExists(atPath: toPath.path) {
+                        try fm.removeItem(at: toPath)
+                    }
+                    try fm.copyItem(at: fileUrl, to: toPath)
+                } catch {
+                    if needsScope { fileUrl.stopAccessingSecurityScopedResource() }
+                    throw error
+                }
+                if needsScope { fileUrl.stopAccessingSecurityScopedResource() }
                 LCParseMachO((toPath.path as NSString).utf8String, false) { path, header, _, _ in
                     LCPatchAddRPath(path, header);
                 }

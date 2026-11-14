@@ -53,6 +53,7 @@ struct LCPath {
 }
 
 class SharedModel: ObservableObject {
+    @Published var registryLoading = true
     @Published var selectedTab: LCTabIdentifier = .apps
     @Published var deepLink: URL?
     
@@ -158,43 +159,31 @@ class InputHelper : AlertHelper<String> {
 extension String: @retroactive Error {}
 extension String: @retroactive LocalizedError {
     public var errorDescription: String? { return self }
-        
-    private static var enBundle : Bundle? = {
-        let language = "en"
-        let path = Bundle.main.path(forResource:language, ofType: "lproj")
-        let bundle = Bundle(path: path!)
-        return bundle
-    }()
-    
-    var loc: String {
-        let message = NSLocalizedString(self, comment: "")
-        if message != self {
-            return message
-        }
 
-        if let forcedString = String.enBundle?.localizedString(forKey: self, value: nil, table: nil){
-            return forcedString
-        }else {
-            return self
-        }
-    }
-    
+    // `loc` 与 en 兜底都在 NSString(Localization) 里（LiveContainer/Localization.m），
+    // 通过桥接头暴露给 Swift。之前这里有一份 Swift 复制品，且 enBundle 用 `path!`
+    // 强制解包——扩展进程里没有 en.lproj 时会直接崩，现已合并到那一份实现。
     func localizeWithFormat(_ arguments: CVarArg...) -> String{
         String.localizedStringWithFormat(self.loc, arguments)
     }
-    
+
     func sanitizeNonACSII() -> String  {
         filter { $0.isASCII }
     }
 }
 
 extension UTType {
-    static let ipa = UTType(filenameExtension: "ipa")!
-    static let tipa = UTType(filenameExtension: "tipa")!
-    static let dylib = UTType(filenameExtension: "dylib")!
-    static let deb = UTType(filenameExtension: "deb")!
-    static let lcFramework = UTType(filenameExtension: "framework", conformingTo: .package)!
-    static let p12 = UTType(filenameExtension: "p12")!
+    // 强制解包在 UTI 尚未注册的 iOS 版本上会直接崩溃，表现成「导入按钮没反应」。
+    // 全部改成安全兜底；证书类型由 Info.plist 的自定义 UTI 提供。
+    static let ipa = UTType(filenameExtension: "ipa") ?? .data
+    static let tipa = UTType(filenameExtension: "tipa") ?? .data
+    static let dylib = UTType(filenameExtension: "dylib") ?? .data
+    static let deb = UTType(filenameExtension: "deb") ?? .data
+    static let lcFramework = UTType(filenameExtension: "framework", conformingTo: .package)
+        ?? UTType(filenameExtension: "framework") ?? .package
+    static let p12 = UTType(filenameExtension: "p12") ?? .data
+    static let pfx = UTType(filenameExtension: "pfx") ?? .data
+    static let pkcs12 = UTType(filenameExtension: "pkcs12") ?? .data
 }
 
 extension Color {

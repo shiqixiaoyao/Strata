@@ -45,6 +45,10 @@ int LiveProcessMain(int argc, char *argv[]) {
     // Ensure app info is delivered
     NSDictionary *appInfo = LiveProcessHandler.retrievedAppInfo;
     NSCAssert(appInfo, @"Failed to retrieve app info");
+    NSDictionary *guestExtension = appInfo[@"LCGuestExtension"];
+    if (guestExtension) {
+        return LCRunGuestExtension(guestExtension, LiveProcessHandler.extensionContext);
+    }
     
     // Check if we received a request to execute a custom payload
     NSString *customPayloadDylib = appInfo[@"customPayloadDylib"];
@@ -78,7 +82,7 @@ int LiveProcessMain(int argc, char *argv[]) {
         NSError* error = nil;
         NSURL *url = [NSURL URLByResolvingBookmarkData:bookmarks[i] options:0 relativeToURL:nil bookmarkDataIsStale:&isStale error:&error];
         if (!url) {
-            [LiveProcessHandler.extensionContext cancelRequestWithError:error ?: [NSError errorWithDomain:@"StrataRuntime" code:3 userInfo:@{NSLocalizedDescriptionKey:@"Cannot resolve guest file access. Relaunch from the app library."}]];
+            [LiveProcessHandler.extensionContext cancelRequestWithError:error ?: [NSError errorWithDomain:@"StrataRuntime" code:3 userInfo:@{NSLocalizedDescriptionKey:NSLocalizedString(@"Cannot resolve guest file access. Relaunch from the app library.", nil)}]];
             return 1;
         }
         [bookmarkedUrls addObject:url];
@@ -90,7 +94,7 @@ int LiveProcessMain(int argc, char *argv[]) {
         bool shared = false;
         NSBundle *runtime = StrataFind32BitRuntime(runtimeName, [NSURL fileURLWithPath:[NSString stringWithFormat:@"%s/Documents", getenv("LC_HOME_PATH")]], [LCSharedUtils appGroupPath]);
         if (!runtime.executablePath || ![NSFileManager.defaultManager isReadableFileAtPath:runtime.executablePath]) {
-            [LiveProcessHandler.extensionContext cancelRequestWithError:[NSError errorWithDomain:@"StrataRuntime" code:4 userInfo:@{NSLocalizedDescriptionKey:@"The guest cannot read its selected 32-bit runtime after granting file access."}]];
+            [LiveProcessHandler.extensionContext cancelRequestWithError:[NSError errorWithDomain:@"StrataRuntime" code:4 userInfo:@{NSLocalizedDescriptionKey:NSLocalizedString(@"The guest cannot read its selected 32-bit runtime after granting file access.", nil)}]];
             return 1;
         }
     }
@@ -122,7 +126,7 @@ int LiveProcessMain(int argc, char *argv[]) {
         NSError *gateError = StrataWaitForGuestDebugger(jitToken, root, 360, ^BOOL(NSError **error) {
             unsigned int flags = 0;
             if (csops(getpid(), 0, &flags, sizeof(flags)) != 0) {
-                *error = [NSError errorWithDomain:@"StrataJITGuest" code:13 userInfo:@{NSLocalizedDescriptionKey:@"Cannot read guest debugging status."}];
+                *error = [NSError errorWithDomain:@"StrataJITGuest" code:13 userInfo:@{NSLocalizedDescriptionKey:NSLocalizedString(@"Cannot read guest debugging status.", nil)}];
                 return NO;
             }
             return (flags & CS_DEBUGGED) != 0;

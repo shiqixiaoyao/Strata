@@ -32,14 +32,14 @@ import StosSign_Anisette
     func signIn(server: String, signingTeam: String, hostID: String, guestID: String) {
         guard !busy else { return }
         guard let url = URL(string: server), url.scheme == "https", url.host != nil, url.user == nil, url.password == nil else {
-            status = "Enter the HTTPS anisette server you use with SideStore."; return
+            status = "Enter the HTTPS anisette server you use with SideStore.".loc; return
         }
         guard !appleID.isEmpty, !password.isEmpty, !signingTeam.isEmpty, !hostID.isEmpty, !guestID.isEmpty else {
-            status = "Enter your signing Apple ID and password. This installation must have a valid signing team."; return
+            status = "Enter your signing Apple ID and password. This installation must have a valid signing team.".loc; return
         }
         expectedHost = hostID; expectedGuest = guestID
         registrations = []; selectedHost = ""; selectedGuest = ""
-        busy = true; status = "Connecting…"
+        busy = true; status = "Connecting…".loc
         let operation = UUID(); generation = operation
         let manager = AnisetteManager(); anisette = manager
         let email = appleID, secret = password
@@ -71,9 +71,9 @@ import StosSign_Anisette
                 if selectedHost.isEmpty { missing.append("Strata: " + hostID) }
                 if selectedGuest.isEmpty { missing.append("Guest process: " + guestID) }
                 if registered.isEmpty {
-                    status = "Apple returned no registered App IDs for this signing team. Check SideStore's Apple ID and team. Refreshing cannot fix an account mismatch."
+                    status = "Apple returned no registered App IDs for this signing team. Check SideStore's Apple ID and team. Refreshing cannot fix an account mismatch.".loc
                 } else if missing.isEmpty {
-                    status = "Matching registrations found. Review both selections before applying."
+                    status = "Matching registrations found. Review both selections before applying.".loc
                 } else {
                     status = "No exact registration matched: " + missing.joined(separator: "; ") + ". Select the corresponding IDs shown in SideStore's App IDs list below. No capability has been changed."
                 }
@@ -87,25 +87,29 @@ import StosSign_Anisette
         guard value.count == 6, value.allSatisfy(\.isNumber), let callback = verification else { return }
         verification = nil; needsCode = false; callback(value); code = ""
     }
-    func apply() {
+    func apply(bypass: Bool = false) {
         guard !busy, let session, let team, let selected = registeredTargets else { return }
         let requested = registrations.filter { selected.contains($0.identifier) }
         guard requested.count == selected.count else { return }
-        busy = true; status = "Requesting capability…"
+        busy = true; status = "Requesting capability…".loc
         let operation = UUID(); generation = operation
         task = Task {
             defer { if generation == operation { busy = false; task = nil } }
             var completed = 0
             do {
-                let capabilities = StrataMemoryRequestPolicy.capabilities
+                let capabilities = bypass ? StrataMemoryRequestPolicy.bypassCapabilities : StrataMemoryRequestPolicy.capabilities
                 for appID in requested {
                     try Task.checkCancellation()
                     _ = try await AppleAPI.shared.updateAppID(appID, capabilities: capabilities, team: team, session: session)
                     completed += 1
                 }
-                if generation == operation { status = "Apple accepted the capability requests. Reimport and install the current Strata IPA through SideStore, keeping all extensions. A refresh alone may not retain the entitlement. Then check Installed memory permissions; this message does not confirm extra memory is active." }
+                if generation == operation { status = "Apple accepted the capability requests. Reimport and install the current Strata IPA through SideStore, keeping all extensions. A refresh alone may not retain the entitlement. Then check Installed memory permissions; this message does not confirm extra memory is active.".loc }
             } catch {
-                if generation == operation { status = "Completed \(completed) of \(requested.count) requests. " + error.localizedDescription }
+                if generation == operation {
+                    status = bypass
+                        ? "Apple refused the RAM bypass. The Increased Debugging Memory Limit is only available to paid Apple Developer Program accounts; free Apple IDs stay at the regular extra-memory limit. Your existing memory permission is unchanged. (\(error.localizedDescription))"
+                        : "Completed \(completed) of \(requested.count) requests. " + error.localizedDescription
+                }
             }
         }
     }
@@ -113,9 +117,9 @@ import StosSign_Anisette
         generation = UUID(); task?.cancel(); task = nil
         let callback = verification; verification = nil; needsCode = false; callback?(nil)
         anisette?.cancel(); anisette = nil
-        password = ""; code = ""; busy = false; status = "Cancelled."
+        password = ""; code = ""; busy = false; status = "Cancelled.".loc
     }
-    func signOut() { cancel(); session = nil; team = nil; registrations = []; selectedHost = ""; selectedGuest = ""; appleID = ""; signedIn = false; status = "Signed out." }
+    func signOut() { cancel(); session = nil; team = nil; registrations = []; selectedHost = ""; selectedGuest = ""; appleID = ""; signedIn = false; status = "Signed out.".loc }
 }
 
 struct StrataMemorySettings: View {
@@ -132,9 +136,11 @@ struct StrataMemorySettings: View {
     var body: some View {
         Form {
             Section("Installed memory permissions") {
-                Label(snapshot["hostMemory"] as? Bool == true ? "Strata: extra memory allowed" : "Strata: standard memory permission", systemImage: "memorychip")
-                Label(snapshot["guestMemory"] as? Bool == true ? "Guest process: extra memory requested in signature" : "Guest process: standard memory signature", systemImage: "app.connected.to.app.below.fill")
-                Text("Available to Strata now: \(snapshot["availableMB"] as? UInt64 ?? (snapshot["availableMB"] as? NSNumber)?.uint64Value ?? 0) MB")
+                Label(snapshot["hostMemory"] as? Bool == true ? "Strata: extra memory allowed".loc : "Strata: standard memory permission".loc, systemImage: "memorychip")
+                Label(snapshot["guestMemory"] as? Bool == true ? "Guest process: extra memory requested in signature".loc : "Guest process: standard memory signature".loc, systemImage: "app.connected.to.app.below.fill")
+                Label(snapshot["hostDebugMemory"] as? Bool == true ? "Strata: RAM bypass (debugging limit) in signature".loc : "Strata: RAM bypass not in signature".loc, systemImage: "bolt.horizontal.circle")
+                Label(snapshot["guestDebugMemory"] as? Bool == true ? "Guest process: RAM bypass in signature".loc : "Guest process: RAM bypass not in signature".loc, systemImage: "bolt.horizontal.circle")
+                Text(LCStr("strata.memory.availableToStrata %@", "Available to Strata now: %@ MB", String(snapshot["availableMB"] as? UInt64 ?? (snapshot["availableMB"] as? NSNumber)?.uint64Value ?? 0)))
                 Button("Refresh status") { snapshot = LCUtils.strataMemoryStatus() as? [String: Any] ?? [:] }
             }
             Section("Latest running-app memory sample") {
@@ -142,17 +148,17 @@ struct StrataMemorySettings: View {
                    let timestamp = sample["sampledAt"] as? Double,
                    let guest = sample["guest"] as? String {
                     Text(guest).font(.headline)
-                    Text("PID: \(sample["pid"] as? Int ?? 0)").font(.caption)
+                    Text(LCStr("strata.memory.pid %@", "PID: %@", String(sample["pid"] as? Int ?? 0))).font(.caption)
                     let inProcess = sample["executionMode"] as? String == "inProcess"
-                    Text(inProcess ? "Normal launch: runs inside Strata's process" : "Runs in a separate guest process").font(.caption)
-                    Label(sample["increasedMemoryEntitlement"] as? Bool == true ? "Running process: extra memory entitlement present" : "Running process: standard memory entitlement", systemImage: "memorychip")
+                    Text((inProcess ? "Normal launch: runs inside Strata's process" : "Runs in a separate guest process").loc).font(.caption)
+                    Label((sample["increasedMemoryEntitlement"] as? Bool == true ? "Running process: extra memory entitlement present" : "Running process: standard memory entitlement").loc, systemImage: "memorychip")
                     if sample["availableReported"] as? Bool == true, let bytes = sample["availableBytes"] as? NSNumber {
-                        Text("Available to running app at sample: \(bytes.uint64Value / 1_048_576) MB")
+                        Text(LCStr("strata.memory.availableToGuest %@", "Available to running app at sample: %@ MB", String(bytes.uint64Value / 1_048_576)))
                     } else { Text("iOS did not report memory headroom for this process.") }
                     if sample["footprintReported"] as? Bool == true, let bytes = sample["footprintBytes"] as? NSNumber {
-                        Text("Running app memory used at sample: \(bytes.uint64Value / 1_048_576) MB")
+                        Text(LCStr("strata.memory.usedByGuest %@", "Running app memory used at sample: %@ MB", String(bytes.uint64Value / 1_048_576)))
                     }
-                    Text("Sampled: " + Date(timeIntervalSince1970: timestamp).formatted(date: .abbreviated, time: .standard)).font(.caption)
+                    Text(LCStr("strata.memory.sampled %@", "Sampled: %@", Date(timeIntervalSince1970: timestamp).formatted(date: .abbreviated, time: .standard))).font(.caption)
                     Button("Copy app memory report") {
                         if let data = try? JSONSerialization.data(withJSONObject: sample, options: [.prettyPrinted, .sortedKeys]) {
                             UIPasteboard.general.string = String(data: data, encoding: .utf8)
@@ -170,8 +176,8 @@ struct StrataMemorySettings: View {
                     SecureField("Password", text: $capability.password)
                     Button("Sign in to Apple") { capability.signIn(server: server, signingTeam: signingTeam, hostID: hostIdentity, guestID: guestIdentity) }.disabled(capability.busy)
                 } else {
-                    Text("Signed Strata ID: " + capability.expectedHost).font(.footnote).textSelection(.enabled)
-                    Text("Signed guest ID: " + capability.expectedGuest).font(.footnote).textSelection(.enabled)
+                    Text(LCStr("strata.memory.signedHost %@", "Signed Strata ID: %@", capability.expectedHost)).font(.footnote).textSelection(.enabled)
+                    Text(LCStr("strata.memory.signedGuest %@", "Signed guest ID: %@", capability.expectedGuest)).font(.footnote).textSelection(.enabled)
                     Picker("Strata registration", selection: $capability.selectedHost) {
                         Text("Choose registration").tag("")
                         ForEach(capability.registrations, id: \.identifier) { registration in
@@ -186,10 +192,12 @@ struct StrataMemorySettings: View {
                     }
                     Text("Select only the Strata and LiveProcess IDs belonging to your SideStore installation. If SideStore uses one shared registration for both, select it in both fields. No IDs are created or changed until you tap Apply.").font(.footnote).foregroundStyle(.secondary)
                     Button("Apply extra memory to selected registrations") { capability.apply() }.disabled(!capability.canApply)
+                    Button("Apply RAM bypass (experimental)") { capability.apply(bypass: true) }.disabled(!capability.canApply)
+                    Text("RAM bypass adds Apple's Increased Debugging Memory Limit. It only raises the limit while a debugger is attached, so use it with Launch with JIT; ordinary launches stay at the regular extra-memory limit. Apple may refuse it for some accounts. iOS still decides the final amount.").font(.footnote).foregroundStyle(.secondary)
                     Button("Sign out") { capability.signOut() }
                 }
                 if capability.busy { ProgressView("Working…"); Button("Cancel") { capability.cancel() } }
-                if !capability.status.isEmpty { Text(capability.status).font(.footnote).textSelection(.enabled) }
+                if !capability.status.isEmpty { Text(capability.status.loc).font(.footnote).textSelection(.enabled) }
             } header: { Text("Enable extra memory") } footer: {
                 Text("Use the same Apple ID and trusted anisette server as SideStore. Credentials stay in memory for this session. After applying, reinstall through SideStore and keep all extensions. iOS decides the memory available on your device.")
             }

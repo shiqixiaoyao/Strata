@@ -47,6 +47,8 @@ struct LCSettingsView: View {
     @StateObject private var certificateRemoveAlert = YesNoHelper()
     @StateObject private var certificateImportFileAlert = AlertHelper<URL>()
     @StateObject private var certificateImportPasswordAlert = InputHelper()
+    // onAppear / onChange 可能投递同一个文件 URL 两次，避免重复弹密码框。
+    @State private var lastHandledCertificatePath: String? = nil
     
     @AppStorage("LCFrameShortcutIcons") var frameShortIcon = false
     @AppStorage("LCSwitchAppWithoutAsking") var silentSwitchApp = false
@@ -69,6 +71,7 @@ struct LCSettingsView: View {
     @AppStorage("LCWaitForDebugger") var waitForDebugger = false
     @AppStorage("LCSharePrivateDataWithLiveProcess") var sharePrivateDataWithLiveProcess = false
     @AppStorage("BKNoWatchdogs") var disableLiveProcessWatchdog = false
+    @AppStorage("StrataFloatingMenuEnabled", store: LCUtils.appGroupUserDefault) var floatingMenu = false
     
     @EnvironmentObject private var sharedModel : SharedModel
     
@@ -84,7 +87,19 @@ struct LCSettingsView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Strata") { StrataCreditsButton(location: "settings.about") }
+                Section("Strata") {
+                    StrataCreditsButton(location: "settings.about")
+                    NavigationLink("App Extensions") { StrataExtensionsView(apps: sharedModel.apps) }
+                    NavigationLink("iPhone Apps") { StrataPhoneAppsView() }
+                    NavigationLink("Refresh") { StrataAutoRefreshSettings() }
+                    if #available(iOS 16.0, *) {
+                    NavigationLink(LCStr("Runtime Manager · Strata %@", "Runtime Manager · Strata %@", StrataVersion.display)) { StrataRuntimeCenter(apps: sharedModel.apps + sharedModel.hiddenApps, launch: { app in Task { do {
+                        if app.uiIsLocked && !sharedModel.isHiddenAppUnlocked { guard try await LCUtils.authenticateUser() else { return } }
+                        try await app.runApp()
+                    } catch { errorInfo = error.localizedDescription; errorShow = true } } }, manage: { _ in sharedModel.selectedTab = .apps }) }
+                    NavigationLink("LocalSigner · Signing Identity") { StrataIdentitySettings() }
+                    }
+                }
                 if sharedModel.multiLCStatus != 2 {
                     Section{
                         if !certificateDataFound {
@@ -193,7 +208,8 @@ struct LCSettingsView: View {
                     Text("lc.settings.JitDesc".loc)
                 }
                 
-                Section { NavigationLink("Memory and signing permissions") { StrataMemorySettings() } }
+                Section { NavigationLink("Automatic refresh") { StrataAutoRefreshSettings() }
+                    NavigationLink("Memory and signing permissions") { StrataMemorySettings() } }
                 Section {
                     Picker(selection: $selected32BitEmulator) {
                         ForEach(sharedModel.arm32EmuApps, id: \.self) { app in
@@ -219,6 +235,31 @@ struct LCSettingsView: View {
                     Text("lc.settings.interface".loc)
                 } footer: {
                     Text("lc.settings.dynamicColors.desc".loc)
+                }
+                Section{
+                    Toggle(isOn: $floatingMenu) {
+                        Text("strata.settings.floatingMenu".loc)
+                    }
+                    Button {
+                        // 访客进程把启动结果写在 App Group 里，这里直接读，
+                        // 打不开悬浮菜单时能立刻看到卡在哪一步，不用连 Xcode。
+                        UIPasteboard.general.string = floatingMenuDiagnostics()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(floatingMenuStatusText())
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.leading)
+                            Text(LCStr("strata.settings.floatingMenuCopy", "复制诊断信息"))
+                                .font(.footnote)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    Text("strata.settings.floatingMenuSection".loc)
+                } footer: {
+                    Text("strata.settings.floatingMenuDesc".loc)
                 }
                 Section{
                     Toggle(isOn: $frameShortIcon) {
@@ -279,11 +320,6 @@ struct LCSettingsView: View {
                         } label: {
                             Text("lc.settings.storageManagement".loc)
                         }
-                    }
-                    NavigationLink {
-                        LCDataManagementView()
-                    } label: {
-                        Text("lc.settings.dataManagement".loc)
                     }
                 }
                 
@@ -388,7 +424,7 @@ struct LCSettingsView: View {
             }
             .alert("lc.common.success".loc, isPresented: $successShow){
             } message: {
-                Text(successInfo)
+                Text(successInfo.loc)
             }
             .alert("lc.settings.importCertificate".loc, isPresented: $certificateImportAlert.show) {
                 Button {
@@ -428,8 +464,8 @@ struct LCSettingsView: View {
             } message: {
                 Text("lc.settings.importCertFromBuiltinSideStoreDesc".loc)
             }
-            .betterFileImporter(isPresented: $certificateImportFileAlert.show, types: [.p12], multiple: false, callback: { fileUrls in
-                certificateImportFileAlert.close(result: fileUrls[0])
+            .betterFileImporter(isPresented: $certificateImportFileAlert.show, types: [.p12, .pfx, .pkcs12, .item], multiple: false, callback: { fileUrls in
+                certificateImportFileAlert.close(result: fileUrls.first)
             }, onDismiss: {
                 certificateImportFileAlert.close(result: nil)
             })
@@ -463,6 +499,33 @@ struct LCSettingsView: View {
         }
     }
     
+    /// 访客进程（LCOrbitCore）把启动判定结果写进 App Group，宿主这侧直接读出来。
+    func floatingMenuStatusText() -> String {
+        guard let status = LCUtils.appGroupUserDefault.dictionary(forKey: "StrataOrbitStatus"),
+              let phase = status["phase"] as? String else {
+            return LCStr("strata.settings.floatingMenuNoReport",
+                         "还没有访客 App 上报状态，打开任意 App 后回到这里查看。")
+        }
+        let label: String
+        switch phase {
+        case "started": label = LCStr("strata.orbit.phase.started", "已启动")
+        case "switch-off": label = LCStr("strata.orbit.phase.switchOff", "开关未开启")
+        case "not-guest": label = LCStr("strata.orbit.phase.notGuest", "非访客进程（Strata 主界面）")
+        default: label = phase
+        }
+        let guest = status["guest"] as? String ?? ""
+        return guest.isEmpty ? label : "\(label) · \(guest)"
+    }
+
+    func floatingMenuDiagnostics() -> String {
+        let status = LCUtils.appGroupUserDefault.dictionary(forKey: "StrataOrbitStatus") ?? [:]
+        var lines = ["Strata floating menu diagnostics", "switch = \(floatingMenu)"]
+        for key in ["phase", "detail", "guest", "date"] {
+            lines.append("\(key) = \(String(describing: status[key] ?? "-"))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     func openGitHub() {
         UIApplication.shared.open(URL(string: "https://github.com/LiveContainer/LiveContainer")!)
     }
@@ -554,36 +617,60 @@ struct LCSettingsView: View {
     }
     
     func importCertificate() async {
-        guard let doImport = await certificateImportAlert.open(), doImport else {
+        guard let doImport = await certificateImportAlert.open(), doImport else { return }
+        guard let certificateURL = await certificateImportFileAlert.open() else { return }
+        await importCertificateFile(certificateURL)
+    }
+
+    /// 导入 .p12 / .pfx / .pkcs12。三处关键修复：安全作用域访问、空密码自动回退、
+    /// 以及导入成功后写入 LCAppGroupID（否则访客 App 读不到证书）。
+    func importCertificateFile(_ certificateURL: URL) async {
+        let ext = certificateURL.pathExtension.lowercased()
+        guard ["p12", "pfx", "pkcs12"].contains(ext) else {
+            errorInfo = LCStr("strata.cert.unsupportedType",
+                              "只能导入 .p12、.pfx 或 .pkcs12 证书文件：%@",
+                              certificateURL.lastPathComponent)
+            errorShow = true
             return
         }
-        guard let certificateURL = await certificateImportFileAlert.open() else {
-            return
-        }
-        guard let certificatePassword = await certificateImportPasswordAlert.open() else {
-            return
-        }
-        let certificateData : Data
+
+        guard let certificatePassword = await certificateImportPasswordAlert.open() else { return }
+
+        let needsScope = certificateURL.startAccessingSecurityScopedResource()
+        let certificateData: Data
         do {
             certificateData = try Data(contentsOf: certificateURL)
         } catch {
+            if needsScope { certificateURL.stopAccessingSecurityScopedResource() }
             errorInfo = error.localizedDescription
             errorShow = true
             return
         }
-        
-        guard let _ = LCUtils.getCertTeamId(withKeyData: certificateData, password: certificatePassword) else {
+        if needsScope { certificateURL.stopAccessingSecurityScopedResource() }
+
+        // 安装器导出的 PKCS#12 经常是空密码；用户填了密码时也再试一次空密码。
+        var passwords: [String] = []
+        if !certificatePassword.isEmpty { passwords.append(certificatePassword) }
+        if !passwords.contains("") { passwords.append("") }
+
+        var matchedPassword: String? = nil
+        for candidate in passwords {
+            if LCUtils.getCertTeamId(withKeyData: certificateData, password: candidate) != nil {
+                matchedPassword = candidate
+                break
+            }
+        }
+        guard let matchedPassword else {
             errorInfo = "lc.settings.invalidCertError".loc
             errorShow = true
             return
         }
 
-        LCUtils.appGroupUserDefault.set(certificateData, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(certificatePassword, forKey: "LCCertificatePassword")
-        LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
-        certificateDataFound = true
+        onSideStoreCertificateCallback(certificateData: certificateData, password: certificatePassword)
 
         UserDefaults.standard.set(LCSharedUtils.appGroupID(), forKey: "LCAppGroupID")
+        successInfo = LCStr("strata.cert.imported", "证书已导入，可在「JIT-Less 诊断」中验证。")
+        successShow = true
     }
     
     func importCertificateFromSideStore() async {
@@ -613,7 +700,7 @@ struct LCSettingsView: View {
                 }
                 
                 guard let data = item as? Data else {
-                    errorInfo = "Failed to decode certificate data"
+                    errorInfo = "Failed to decode certificate data".loc
                     errorShow = true
                     return
                 }
@@ -650,17 +737,22 @@ struct LCSettingsView: View {
         }
         
         guard let url = URL(string: "\(storeScheme.lowercased())://certificate?callback_template=livecontainer%3A%2F%2Fcertificate%3Fcert%3D%24%28BASE64_CERT%29%26password%3D%24%28PASSWORD%29") else {
-            errorInfo = "Failed to initialize certificate import URL."
+            errorInfo = "Failed to initialize certificate import URL.".loc
             errorShow = true
             return
         }
         await UIApplication.shared.open(url)
     }
     func onSideStoreCertificateCallback(certificateData: Data, password: String) {
-        LCUtils.appGroupUserDefault.set(certificateData, forKey: "LCCertificateData")
-        LCUtils.appGroupUserDefault.set(password, forKey: "LCCertificatePassword")
-        LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
-        certificateDataFound = true
+        do {
+            try LCSharedUtils.strataStoreSigningIdentity(certificateData, password: password)
+            for defaults in [LCUtils.appGroupUserDefault, UserDefaults.standard] {
+                defaults.removeObject(forKey: "LCCertificateData")
+                defaults.removeObject(forKey: "LCCertificatePassword")
+            }
+            LCUtils.appGroupUserDefault.set(NSDate.now, forKey: "LCCertificateUpdateDate")
+            certificateDataFound = true
+        } catch { errorInfo = error.localizedDescription; errorShow = true }
     }
     
     func removeCertificate() async {
@@ -668,6 +760,10 @@ struct LCSettingsView: View {
             return
         }
 
+        do { try LCSharedUtils.strataRemoveSigningIdentity() }
+        catch { errorInfo = error.localizedDescription; errorShow = true; return }
+        UserDefaults.standard.removeObject(forKey: "LCCertificateData")
+        UserDefaults.standard.removeObject(forKey: "LCCertificatePassword")
         LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificateData")
         LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificatePassword")
         LCUtils.appGroupUserDefault.set(nil, forKey: "LCCertificateUpdateDate")
@@ -704,17 +800,30 @@ struct LCSettingsView: View {
     }
     
     func handleURL(url: URL) {
-        if url.host == "certificate" {
-            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                let queryItems = components.queryItems?.reduce(into: [String: String]()) { $0[$1.name.lowercased()] = $1.value } ?? [:]
-                guard let encodedCert = queryItems["cert"]?.removingPercentEncoding,
-                      let password = queryItems["password"],
-                      let certData = Data(base64Encoded: encodedCert)
-                else { return }
-                
-                onSideStoreCertificateCallback(certificateData: certData, password: password)
-                
-            }
+        // 从「文件」App 用 Strata 打开证书：直接进导入流程。
+        if url.isFileURL {
+            let ext = url.pathExtension.lowercased()
+            guard ["p12", "pfx", "pkcs12"].contains(ext) else { return }
+            let path = url.path
+            if lastHandledCertificatePath == path { return }
+            lastHandledCertificatePath = path
+            Task { await importCertificateFile(url) }
+            return
         }
+        guard url.host?.lowercased() == "certificate",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let queryItems = components.queryItems?.reduce(into: [String: String]()) {
+            $0[$1.name.lowercased()] = $1.value
+        } ?? [:]
+        // 兼容 cert= 与 data=；password 缺省按空密码处理；'+' 可能被 form decode 成空格。
+        guard let raw = queryItems["cert"] ?? queryItems["data"],
+              let encoded = raw.removingPercentEncoding,
+              let certData = Data(base64Encoded: encoded.replacingOccurrences(of: " ", with: "+"))
+        else { return }
+        let password = queryItems["password"] ?? ""
+        onSideStoreCertificateCallback(certificateData: certData, password: password)
+        UserDefaults.standard.set(LCSharedUtils.appGroupID(), forKey: "LCAppGroupID")
+        successInfo = LCStr("strata.cert.imported", "证书已导入，可在「JIT-Less 诊断」中验证。")
+        successShow = true
     }
 }

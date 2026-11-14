@@ -4,7 +4,7 @@ enum StrataJITScriptMode: String, CaseIterable, Identifiable {
     case automatic, universal, custom
     var id: String { rawValue }
     var title: String {
-        switch self { case .automatic: return "Automatic"; case .universal: return "Built-in Universal"; case .custom: return "Imported script" }
+        switch self { case .automatic: return "Automatic".loc; case .universal: return "Built-in Universal".loc; case .custom: return "Imported script".loc }
     }
 }
 enum StrataJITScriptPolicy {

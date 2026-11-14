@@ -891,7 +891,7 @@ private struct AltStoreSourceSectionView: View {
             }
             
             if let subtitle = item.source?.subtitle, !subtitle.isEmpty {
-                Text(subtitle)
+                Text(subtitle.loc)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if item.source == nil, let host = item.url.host {
@@ -1010,7 +1010,7 @@ private struct LCSourceAppBanner: View {
                         .foregroundColor(textColor)
                         .lineLimit(1)
                     if !subtitleText.isEmpty {
-                        Text(subtitleText)
+                        Text(subtitleText.loc)
                             .font(.system(size: 11))
                             .foregroundColor(textColor)
                             .lineLimit(1)

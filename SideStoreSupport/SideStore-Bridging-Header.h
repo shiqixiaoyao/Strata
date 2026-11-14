@@ -3,6 +3,8 @@
 
 #include "../LiveContainer/FoundationPrivate.h"
 #include "XPCServer.h"
+#import "../LiveContainer/LCSharedUtils.h"
 #include "../LiveContainer/utils.h"
+#import "../LiveContainer/Localization.h"
 #include "PrivateIntentRunner.h"
 #endif /* SideStore_Bridging_Header_h_h */

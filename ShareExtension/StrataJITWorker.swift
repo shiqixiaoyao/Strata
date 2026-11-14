@@ -1,5 +1,23 @@
 import Foundation
 
+/// `String(describing:)` 会把枚举 case 名直接抛给用户，这里换成可读中文。
+private func jitStageText(_ stage: StikJIT.PreparationStage) -> String {
+    switch stage {
+    case .checkingReachability:
+        return "Checking device reachability…".loc
+    case .checkingDDI:
+        return "Checking the developer disk image…".loc
+    case .downloadingDDI(let fraction, let status):
+        return String(format: "Downloading the developer disk image: %d%% · %@".loc, Int32(fraction * 100), status)
+    case .mountingDDI(let fraction):
+        return String(format: "Mounting the developer disk image: %d%%".loc, Int32(fraction * 100))
+    case .verifyingDDI:
+        return "Verifying the developer disk image…".loc
+    case .ready:
+        return "Device ready.".loc
+    }
+}
+
 /// Runs debugger work outside the target process, serially. Pairing data never enters logs.
 enum StrataJITWorker {
     private static let lock = NSLock()
@@ -13,7 +31,7 @@ enum StrataJITWorker {
               let data = input["pairing"] as? Data, data.count < 2_000_000,
               let group = input["group"] as? String,
               let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
-            context.cancelRequest(withError: NSError(domain: "StrataJIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JIT request."]))
+            context.cancelRequest(withError: NSError(domain: "StrataJIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JIT request.".loc]))
             return true
         }
         lock.lock()
@@ -29,7 +47,7 @@ enum StrataJITWorker {
                 try? fm.createDirectory(at: status.deletingLastPathComponent(), withIntermediateDirectories: true)
                 if let encoded = try? JSONSerialization.data(withJSONObject: object) { try? encoded.write(to: status, options: .atomic) }
             }
-            report("JIT helper connected.")
+            report("JIT helper connected.".loc)
             let pairing = fm.temporaryDirectory.appendingPathComponent("\(token).plist")
             defer { try? fm.removeItem(at: pairing) }
             do {
@@ -39,7 +57,7 @@ enum StrataJITWorker {
                 let operation = input["operation"] as? String ?? "enable"
                 if operation == "reset" {
                     try StikJIT.resetCachedDDI(at: paths)
-                    report("Developer disk image cache reset.", done: true, success: true)
+                    report("Developer disk image cache reset.".loc, done: true, success: true)
                     context.completeRequest(returningItems: nil)
                     return
                 }
@@ -47,30 +65,30 @@ enum StrataJITWorker {
                 let port = input["remotePairPort"] as? Int ?? 49152
                 let octets = address.split(separator: ".", omittingEmptySubsequences: false)
                 guard octets.count == 4, octets.allSatisfy({ UInt8($0) != nil }), let endpointPort = UInt16(exactly: port), endpointPort > 0 else {
-                    throw NSError(domain: "StrataJIT", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid device endpoint."])
+                    throw NSError(domain: "StrataJIT", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid device endpoint.".loc])
                 }
                 let config = StikJIT.Configuration(deviceAddress: address, rsdPort: endpointPort)
-                report("Connecting to device at \(address):\(endpointPort)…")
+                report(String(format: "Connecting to device at %@:%d…".loc, address, Int32(endpointPort)))
                 let readiness = StikJIT.prepareDevice(pairingFile: pairing, paths: paths, configuration: config) { stage in
-                    report(String(describing: stage))
+                    report(jitStageText(stage))
                 }
                 switch readiness {
                 case .unreachable(let reason), .preparationFailed(let reason): throw NSError(domain: "StrataJIT", code: 2, userInfo: [NSLocalizedDescriptionKey: reason])
                 case .ready(let state):
                     if operation == "prepare" {
-                        let txm = state.isTXMPresent.map { $0 ? "present" : "not present" } ?? "unknown"
-                        report("Device ready. TXM/SPTM: " + txm, done: true, success: true)
+                        let txm = state.isTXMPresent.map { $0 ? "strata.jit.txm.present".loc : "strata.jit.txm.absent".loc } ?? "strata.jit.txm.unknown".loc
+                        report(String(format: "Device ready. TXM/SPTM: %@".loc, txm), done: true, success: true)
                         context.completeRequest(returningItems: nil)
                         return
                     }
-                    guard let txm = state.isTXMPresent else { throw NSError(domain: "StrataJIT", code: 3, userInfo: [NSLocalizedDescriptionKey: "Cannot determine device JIT requirements."]) }
+                    guard let txm = state.isTXMPresent else { throw NSError(domain: "StrataJIT", code: 3, userInfo: [NSLocalizedDescriptionKey: "Cannot determine device JIT requirements.".loc]) }
                     let script = input["script"] as? String ?? ""
-                    if txm && script.isEmpty { throw NSError(domain: "StrataJIT", code: 4, userInfo: [NSLocalizedDescriptionKey: "This guest needs a compatible iOS JIT script. Configure its JIT script in app settings before launching."]) }
-                    report("Connecting debugger…")
+                    if txm && script.isEmpty { throw NSError(domain: "StrataJIT", code: 4, userInfo: [NSLocalizedDescriptionKey: "This guest needs a compatible iOS JIT script. Configure its JIT script in app settings before launching.".loc]) }
+                    report("Connecting debugger…".loc)
                     // Preserve the guest's existing protocol; never substitute a universal script for an arbitrary engine.
                     try StikJIT.enableJIT(targetPID: pid, pairingFile: pairing, ddiPaths: paths, configuration: config,
                         script: script.isEmpty ? .universal : .customBase64(script), progress: { report($0) })
-                    report("JIT request completed.", done: true, success: true)
+                    report("JIT request completed.".loc, done: true, success: true)
                 }
             } catch { report(error.localizedDescription, done: true) }
             context.completeRequest(returningItems: nil)

@@ -126,7 +126,7 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
                     self?.refreshView()
                 }
             }
-            menuChildren.append(UIMenu(title: "Containers", options: .displayInline, children: containerActions))
+            menuChildren.append(UIMenu(title: "Containers".loc, options: .displayInline, children: containerActions))
         }
 
         // 2. Main Section

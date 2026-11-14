@@ -24,6 +24,11 @@ class LCAppModel: ObservableObject, Hashable {
             appInfo.isJITNeeded = uiIsJITNeeded
         }
     }
+    @Published var uiHelperProcessesSupport: Bool {
+        didSet {
+            appInfo.helperProcessesSupport = uiHelperProcessesSupport
+        }
+    }
     @Published var uiClassicMode : Bool {
         didSet {
             appInfo.classicMode = uiClassicMode
@@ -61,6 +66,11 @@ class LCAppModel: ObservableObject, Hashable {
     @Published var uiFixLocalNotification : Bool {
         didSet {
             appInfo.fixLocalNotification = uiFixLocalNotification
+        }
+    }
+    @Published var uiFixBackgroundTaskIdentifiers : Bool {
+        didSet {
+            appInfo.fixBackgroundTaskIdentifiers = uiFixBackgroundTaskIdentifiers
         }
     }
     
@@ -169,6 +179,7 @@ class LCAppModel: ObservableObject, Hashable {
         }
         
         self.uiIsJITNeeded = appInfo.isJITNeeded
+        self.uiHelperProcessesSupport = appInfo.helperProcessesSupport
         self.uiClassicMode = appInfo.classicMode
         self.uiIsHidden = appInfo.isHidden
         self.uiIsLocked = appInfo.isLocked
@@ -183,6 +194,7 @@ class LCAppModel: ObservableObject, Hashable {
         self.uiUseLCBundleId = appInfo.doUseLCBundleId
         self.uiFixFilePickerNew = appInfo.fixFilePickerNew
         self.uiFixLocalNotification = appInfo.fixLocalNotification
+        self.uiFixBackgroundTaskIdentifiers = appInfo.fixBackgroundTaskIdentifiers
         self.uiHideLiveContainer = appInfo.hideLiveContainer
         self.uiDontInjectTweakLoader = appInfo.dontInjectTweakLoader
         self.uiTweakLoaderInjectFailed = appInfo.info()["LCTweakLoaderCantInject"] as? Bool ?? false
@@ -212,6 +224,10 @@ class LCAppModel: ObservableObject, Hashable {
     
     // You should let LCAppModel.runApp to decide whether to run in multitask mode, but you may override the multitask parameter if necessary
     func runApp(multitask: Bool? = nil, containerFolderName : String? = nil, bundleIdOverride : String? = nil, urlStr : String? = nil, forceJIT: Bool? = nil) async throws{
+        if let shortcut = appInfo as? StrataPhoneAppInfo {
+            try await StrataPhoneApps.shared.open(shortcut.entryID)
+            return
+        }
         let acquired = await MainActor.run { () -> Bool in
             guard !self.isAppRunning else { return false }
             self.isAppRunning = true
@@ -220,7 +236,7 @@ class LCAppModel: ObservableObject, Hashable {
         guard acquired else { return }
         defer { Task { await MainActor.run { self.isAppRunning = false } } }
         if appInfo.is32bit {
-            guard let delegate else { throw "App library is not ready to prepare the 32-bit runtime." }
+            guard let delegate else { throw "App library is not ready to prepare the 32-bit runtime.".loc }
             try await delegate.ensureBundled32BitRuntime(for: self)
         }
         if uiContainers.isEmpty {
@@ -242,13 +258,23 @@ class LCAppModel: ObservableObject, Hashable {
         
         let classicMode = appInfo.defaultClassicMode
         let builtInJIT = LCUtils.appGroupUserDefault.integer(forKey: "LCJITEnablerType") == JITEnablerType.BuiltIn.rawValue && (forceJIT ?? (appInfo.isJITNeeded || appInfo.is32bit))
+        let hostOptions = (LCUtils.appGroupUserDefault.string(forKey: "StrataHostJITApps") ?? "{}").data(using: .utf8).flatMap { try? JSONDecoder().decode([String: Bool].self, from: $0) } ?? [:]
+        let hostKey = "\(uiIsShared ? "shared" : "local"):\(appInfo.relativeBundlePath ?? bundleIdentifier)"
+        let hostJIT = builtInJIT && hostOptions[hostKey] == true && multitask != true && classicMode == 0
         if builtInJIT && classicMode != 0 {
-            throw "Built-in JIT requires normal compatibility mode. Turn off Classic Mode for this app, then retry."
+            throw "Built-in JIT requires normal compatibility mode. Turn off Classic Mode for this app, then retry.".loc
         }
-        let preferredMultitask = classicMode == 0 ? (multitask ?? (builtInJIT ? false : shouldLaunchInMultitaskMode)) : false
+        let preferredMultitask = hostJIT ? false : (classicMode == 0 ? (multitask ?? (builtInJIT ? false : shouldLaunchInMultitaskMode)) : false)
         // Keep the JIT target alive in a full-screen guest when normal presentation is requested.
-        let fullScreenJIT = builtInJIT && !preferredMultitask
-        let multitask = preferredMultitask || fullScreenJIT
+        let fullScreenJIT = builtInJIT && !hostJIT && !preferredMultitask
+        // Seamless switching: run each app in its own process, full screen, so switching brings its
+        // window to the front instead of relaunching Strata. Explicit in-process requests (HostJIT,
+        // Classic Mode, Request Game Mode = multitask false) keep the old path.
+        let seamless = (LCUtils.appGroupUserDefault.object(forKey: "StrataSeamlessSwitching") as? Bool ?? true)
+            && !hostJIT && classicMode == 0 && multitask == nil && !preferredMultitask
+            // The built-in SideStore lives inside Strata and can't run in a LiveProcess.
+            && bundleIdOverride == nil && !(appInfo is BuiltInSideStoreAppInfo)
+        let multitask = preferredMultitask || fullScreenJIT || seamless
         
         if MultitaskManager.isMultitasking() || multitask,
            let currentDataFolder {
@@ -316,7 +342,7 @@ class LCAppModel: ObservableObject, Hashable {
                     if let url = launchURLComp.url {
                         await UIApplication.shared.open(url)
                     } else {
-                        throw "Unable to build URL from launchURLComp???"
+                        throw "Unable to build URL from launchURLComp???".loc
                     }
                     return
                 }
@@ -346,16 +372,22 @@ class LCAppModel: ObservableObject, Hashable {
 #if targetEnvironment(simulator)
         jitNeeded = false
 #endif
-        if jitNeeded {
+        if jitNeeded && hostJIT {
+            guard let relative = appInfo.relativeBundlePath, let folder = uiSelectedContainer?.folderName else { throw "HostJIT needs a registered guest and data container.".loc }
+            let hostPairingURL = await LiveBoardBuiltInJIT.pairingURL
+            guard FileManager.default.fileExists(atPath: hostPairingURL.path) else { throw "Import a pairing file and prepare the device before testing HostJIT.".loc }
+            UserDefaults.standard.set(["app": relative, "container": folder, "created": Date().timeIntervalSince1970, "script": resolvedJITScript ?? LCUtils.base64EncodedUniversalJITScript()], forKey: "StrataHostJITRequest")
+            LCSharedUtils.launchToGuestApp(withClassicMode: classicMode)
+        } else if jitNeeded {
             if multitask, #available(iOS 17.4, *) {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    LCUtils.launchMultitaskGuestApp(appInfo.displayName(), fullScreen: fullScreenJIT, waitForJIT: builtInJIT) { pidNumber, error in
+                    LCUtils.launchMultitaskGuestApp(appInfo.displayName(), fullScreen: fullScreenJIT || seamless, waitForJIT: builtInJIT) { pidNumber, error in
                         if let error {
                             continuation.resume(throwing: error)
                             return
                         }
                         guard let pidNumber = pidNumber else {
-                            continuation.resume(throwing: "Failed to obtain PID from LiveProcess")
+                            continuation.resume(throwing: "Failed to obtain PID from LiveProcess".loc)
                             return
                         }
                         Task {
@@ -542,5 +574,43 @@ class LCAppModel: ObservableObject, Hashable {
             }
             return found
         }
+    }
+    
+    static func copy(fromApp: LCAppModel, toAppInfo: LCAppInfo) {
+        // copy previous configration to new app
+        toAppInfo.autoSaveDisabled = true
+        toAppInfo.isLocked = fromApp.appInfo.isLocked
+        toAppInfo.isHidden = fromApp.appInfo.isHidden
+        toAppInfo.isShared = fromApp.appInfo.isShared
+        
+        toAppInfo.containerInfo = fromApp.appInfo.containerInfo
+        toAppInfo.tweakFolder = fromApp.appInfo.tweakFolder
+        toAppInfo.dataUUID = fromApp.appInfo.dataUUID
+        
+        toAppInfo.spoofSDKVersion = fromApp.appInfo.spoofSDKVersion
+        toAppInfo.doSymlinkInbox = fromApp.appInfo.doSymlinkInbox
+
+        toAppInfo.selectedLanguage = fromApp.appInfo.selectedLanguage
+
+        toAppInfo.orientationLock = fromApp.appInfo.orientationLock
+        toAppInfo.dontInjectTweakLoader = fromApp.appInfo.dontInjectTweakLoader
+        toAppInfo.hideLiveContainer = fromApp.appInfo.hideLiveContainer
+        toAppInfo.dontLoadTweakLoader = fromApp.appInfo.dontLoadTweakLoader
+        toAppInfo.doUseLCBundleId = fromApp.appInfo.doUseLCBundleId
+        toAppInfo.fixFilePickerNew = fromApp.appInfo.fixFilePickerNew
+        toAppInfo.fixLocalNotification = fromApp.appInfo.fixLocalNotification
+        toAppInfo.fixBackgroundTaskIdentifiers = fromApp.appInfo.fixBackgroundTaskIdentifiers
+        
+        toAppInfo.isJITNeeded = fromApp.appInfo.isJITNeeded
+        toAppInfo.jitLaunchScriptJs = fromApp.appInfo.jitLaunchScriptJs
+        toAppInfo.helperProcessesSupport = fromApp.appInfo.helperProcessesSupport
+        
+        toAppInfo.multitaskSpecified = fromApp.appInfo.multitaskSpecified
+        toAppInfo.classicMode = fromApp.appInfo.classicMode
+        
+        toAppInfo.lastLaunched = fromApp.appInfo.lastLaunched
+        
+        toAppInfo.autoSaveDisabled = false
+        toAppInfo.save()
     }
 }

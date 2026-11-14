@@ -47,7 +47,7 @@ import ImageIO
 
 extension LiveBoardHomeLayout.Widget.Kind {
     var title: String {
-        switch self { case .photo: return "Photos"; case .clock: return "Clock"; case .calendar: return "Calendar"; case .battery: return "Batteries" }
+        switch self { case .photo: return LCStr("strata.widget.photos", "Photos"); case .clock: return LCStr("strata.widget.clock", "Clock"); case .calendar: return LCStr("strata.widget.calendar", "Calendar"); case .battery: return LCStr("strata.widget.batteries", "Batteries") }
     }
     var symbol: String {
         switch self { case .photo: return "photo.on.rectangle"; case .clock: return "clock"; case .calendar: return "calendar"; case .battery: return "battery.100percent" }

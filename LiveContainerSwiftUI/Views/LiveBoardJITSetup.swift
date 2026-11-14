@@ -20,16 +20,16 @@ struct LiveBoardJITSetup: View {
                 }
                 if provider == JITEnablerType.BuiltIn.rawValue {
                     Section("One-time setup") {
-                        Label(hasPairing ? "Pairing file imported" : "Pairing file needed", systemImage: hasPairing ? "checkmark.circle" : "doc.badge.plus")
-                        Button(hasPairing ? "Replace pairing file" : "Import remote pairing file") { importing = true }
+                        Label(hasPairing ? "Pairing file imported".loc : "Pairing file needed".loc, systemImage: hasPairing ? "checkmark.circle" : "doc.badge.plus")
+                        Button(hasPairing ? "Replace pairing file".loc : "Import remote pairing file".loc) { importing = true }
                         if hasPairing {
                             Button("Remove pairing file", role: .destructive) {
-                                do { try FileManager.default.removeItem(at: LiveBoardBuiltInJIT.pairingURL); hasPairing = false; session.message = "Pairing file removed." }
+                                do { try FileManager.default.removeItem(at: LiveBoardBuiltInJIT.pairingURL); hasPairing = false; session.message = "Pairing file removed.".loc }
                                 catch { session.message = error.localizedDescription }
                             }
                         }
                         Text("Enable Developer Mode in iPhone Settings. Connect LocalDevVPN and Wi-Fi before using Launch with JIT. The first launch may download a developer disk image.")
-                        Label(LCUtils.strataCanDebug() ? "Debugging permission available" : "Re-signing required: debugging permission missing", systemImage: LCUtils.strataCanDebug() ? "checkmark.shield" : "exclamationmark.shield")
+                        Label(LCUtils.strataCanDebug() ? "Debugging permission available".loc : "Re-signing required: debugging permission missing".loc, systemImage: LCUtils.strataCanDebug() ? "checkmark.shield" : "exclamationmark.shield")
                         Text("Built-in JIT uses a guest process to keep its debugger connection alive. Normal launch requests open that guest full-screen. Keep app extensions when installing Strata. On newer iOS versions, the guest may also need a compatible JIT script in its app settings.").foregroundStyle(.secondary)
                     }
                     Section("Device connection") {
@@ -47,10 +47,10 @@ struct LiveBoardJITSetup: View {
                             Button("Cancel") { session.cancel() }
                         }
                         if let operationSucceeded = session.success {
-                            Label(operationSucceeded ? "Completed" : "Could not complete", systemImage: operationSucceeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            Label(operationSucceeded ? "Completed".loc : "Could not complete".loc, systemImage: operationSucceeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .foregroundStyle(operationSucceeded ? .green : .orange)
                         }
-                        if !session.message.isEmpty { Text(session.message).font(.footnote).textSelection(.enabled).accessibilityIdentifier("jit.status") }
+                        if !session.message.isEmpty { Text(session.message.loc).font(.footnote).textSelection(.enabled).accessibilityIdentifier("jit.status") }
                     }
                     Section("Launch") {
                         Text("Touch and hold an app, or open its console options, and choose Launch with JIT. Strata prepares the device and connects its helper automatically. Errors appear in the launch window.")
@@ -61,7 +61,7 @@ struct LiveBoardJITSetup: View {
                         NavigationLink("Provider settings") { LCSettingsView() }
                     }
                 }
-                if provider != JITEnablerType.BuiltIn.rawValue && !session.message.isEmpty { Section { Text(session.message) } }
+                if provider != JITEnablerType.BuiltIn.rawValue && !session.message.isEmpty { Section { Text(session.message.loc) } }
                 Section { NavigationLink("Memory and signing permissions") { StrataMemorySettings() } }
                 Section { NavigationLink("JIT-less setup and diagnostics") { LCJITLessDiagnoseView() } }
             }.navigationTitle("JIT setup")
@@ -71,7 +71,7 @@ struct LiveBoardJITSetup: View {
                         let url = try result.get()
                         try LiveBoardBuiltInJIT.importPairing(url)
                         hasPairing = true
-                        session.message = "Pairing file imported. Connect LocalDevVPN, then launch an app with JIT."
+                        session.message = "Pairing file imported. Connect LocalDevVPN, then launch an app with JIT.".loc
                     } catch { session.message = error.localizedDescription }
                 }
         }.navigationViewStyle(.stack)

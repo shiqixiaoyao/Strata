@@ -181,7 +181,7 @@ struct LCContainerView : View {
         }
         .alert("lc.common.success".loc, isPresented: $successShow){
         } message: {
-            Text(successInfo)
+            Text(successInfo.loc)
         }
         
         .alert("lc.container.removeContainer".loc, isPresented: $removeContainerAlert.show) {

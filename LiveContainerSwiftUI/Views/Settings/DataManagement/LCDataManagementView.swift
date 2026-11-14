@@ -34,9 +34,9 @@ struct LCDataManagementView : View {
     
     init() {
         _folderPaths = State(initialValue: [
-            LCFolderPath(path: LCPath.docPath, desc: "Private Container"),
-            LCFolderPath(path: LCPath.lcGroupDocPath, desc: "App Group Container"),
-            LCFolderPath(path: Bundle.main.bundleURL, desc: "LiveContainer Bundle"),
+            LCFolderPath(path: LCPath.docPath, desc: "Private Container".loc),
+            LCFolderPath(path: LCPath.lcGroupDocPath, desc: "App Group Container".loc),
+            LCFolderPath(path: Bundle.main.bundleURL, desc: "LiveContainer Bundle".loc),
         ])
     }
     
@@ -127,7 +127,7 @@ struct LCDataManagementView : View {
         }
         .alert("lc.common.success".loc, isPresented: $successShow){
         } message: {
-            Text(successInfo)
+            Text(successInfo.loc)
         }
         .alert("lc.settings.cleanDataFolder".loc, isPresented: $appFolderRemovalAlert.show) {
             if folderRemoveCount > 0 {
@@ -143,7 +143,7 @@ struct LCDataManagementView : View {
             }
         } message: {
             if folderRemoveCount > 0 {
-                Text("lc.settings.cleanDataFolderConfirm %lld".localizeWithFormat(folderRemoveCount))
+                Text(LCStr("strata.settings.cleanDataFolderConfirm", "This permanently deletes the data folders of %lld apps from the container. This cannot be undone.", folderRemoveCount))
             } else {
                 Text("lc.settings.noDataFolderToClean".loc)
             }
@@ -397,7 +397,7 @@ struct LCDataManagementView : View {
                 try fm.moveItem(at: LCPath.lcGroupTweakPath.appendingPathComponent(tweakFolderInUse), to: LCPath.tweakPath.appendingPathComponent(tweakFolderInUse))
                 movedTweakFolderCount += 1
             }
-            successInfo = "lc.settings.moveDanglingFolderComplete %lld %lld".localizeWithFormat(movedDataFolderCount,movedTweakFolderCount)
+            successInfo = LCStr("strata.settings.moveDanglingFolderComplete", "Moved %lld data folders and %lld tweak folders.", movedDataFolderCount, movedTweakFolderCount)
             successShow = true
             
         } catch {

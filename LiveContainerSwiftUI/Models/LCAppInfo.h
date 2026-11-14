@@ -23,6 +23,7 @@ typedef NS_ENUM(NSInteger, MultitaskSpecified){
 @property NSString* relativeBundlePath;
 @property bool isShared;
 @property bool isJITNeeded;
+@property bool helperProcessesSupport;
 @property bool classicMode;
 @property (nonatomic, readonly) NSUInteger defaultClassicMode;
 @property bool isLocked;
@@ -35,6 +36,7 @@ typedef NS_ENUM(NSInteger, MultitaskSpecified){
 @property MultitaskSpecified multitaskSpecified;
 @property bool fixFilePickerNew;
 @property bool fixLocalNotification;
+@property bool fixBackgroundTaskIdentifiers;
 @property bool doUseLCBundleId;
 @property NSString* selectedLanguage;
 @property NSString* dataUUID;
@@ -68,6 +70,7 @@ typedef NS_ENUM(NSInteger, MultitaskSpecified){
 - (UIImage *)generateLiveContainerWrappedIconWithStyle:(GeneratedIconStyle)style;
 - (NSDictionary *)generateWebClipConfigWithContainerId:(NSString*)containerId iconStyle:(GeneratedIconStyle)style;
 - (BOOL)enableGameModeSupportWithError:(NSError **)error;
+- (BOOL)gameModeSupportDeclared;
 - (void)save;
 - (void)patchExecAndSignIfNeedWithCompletionHandler:(void(^)(bool success, NSString* errorInfo))completetionHandler progressHandler:(void(^)(NSProgress* progress))progressHandler  forceSign:(BOOL)forceSign;
 @end

@@ -6,6 +6,29 @@ brew install ldid
 # move lc to working folder
 mv "$archive_path.xcarchive/Products/Applications" Payload
 
+# 扩展（.appex）与 SideStoreSupport.framework 都是独立 bundle：进程里 Bundle.main 指向它们自己，
+# 而这些 bundle 里没有任何 .lproj，于是扩展界面只能显示 key 原文（String.loc 的 en 兜底还会踩空）。
+# 把主 App 编译出的语言表按语言原样复制进去：中文系统走 zh-Hans，英文系统走 en。
+# 注意必须按语言一一对应，早先「两种语言都塞中文表」会让英文系统显示中文。
+APP_BUNDLE=./Payload/LiveContainer.app
+
+copy_lproj() {
+  dest="$1"
+  for loc in zh-Hans en; do
+    src="$APP_BUNDLE/$loc.lproj"
+    [ -d "$src" ] || continue
+    mkdir -p "$dest/$loc.lproj"
+    [ -f "$src/Localizable.strings" ] && cp "$src/Localizable.strings" "$dest/$loc.lproj/"
+    [ -f "$src/Localizable.stringsdict" ] && cp "$src/Localizable.stringsdict" "$dest/$loc.lproj/"
+  done
+  true
+}
+
+for bundle in "$APP_BUNDLE"/PlugIns/*.appex "$APP_BUNDLE"/Frameworks/SideStoreSupport.framework; do
+  [ -d "$bundle" ] || continue
+  copy_lproj "$bundle"
+done
+
 # temporarily move sidestore support framrwork to tmp before zip
 mkdir tmp
 mv Payload/LiveContainer.app/Frameworks/SideStoreSupport.framework ./tmp
@@ -52,6 +75,12 @@ rm ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore
 mv ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore.dylib ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore
 ldid -S"" ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/SideStore
 cp ./.github/sidelc/LCAppInfo.plist ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/
+
+# SideStore 访客进程里 NSBundle.mainBundle 会被换成 SideStoreApp.framework，
+# 而这个 framework 本身没有 .lproj，所以所有本地化查询都会回落到英文原文。
+# 同样按语言把主 bundle 的表搬过来。
+SIDESTORE_FW=./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework
+copy_lproj "$SIDESTORE_FW"
 
 # copy intents
 cp ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/Intents.intentdefinition ./Payload/LiveContainer.app/

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.kdt.livecontainer.bgtask.*</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDisplayName</key>
@@ -16,6 +20,16 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.item</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Signing Certificate</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.kdt.livecontainer.p12</string>
 			</array>
 		</dict>
 	</array>
@@ -34,7 +48,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.10</string>
+	<string>4.0.4</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -49,7 +63,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>3.8.10</string>
+	<string>4.0.4</string>
 	<key>GCSupportedGameControllers</key>
 	<array>
 		<dict>
@@ -148,6 +162,8 @@
 		<string>_dns-sd._udp</string>
 		<string>_remotepairing-pairable-host._tcp</string>
 		<string>_stikpairprobe._tcp</string>
+		<string>_flux._udp</string>
+		<string>_dicom._tcp</string>
 	</array>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>The guest app is requesting for this permission.</string>
@@ -209,6 +225,12 @@
 	<string>The guest app is requesting for this permission.</string>
 	<key>SBAppUsesLocalNotifications</key>
 	<integer>1</integer>
+	<key>StrataBuildChannel</key>
+	<string>Release</string>
+	<key>StrataMarketingVersion</key>
+	<string>4.0.4</string>
+	<key>StrataRevision</key>
+	<integer>61</integer>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -224,6 +246,7 @@
 		<string>nearby-interaction</string>
 		<string>remote-notification</string>
 		<string>voip</string>
+		<string>processing</string>
 	</array>
 	<key>UIDeviceFamily</key>
 	<array>
@@ -324,5 +347,51 @@
 	</array>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+			<key>UTTypeDescription</key>
+			<string>LiveContainer tweak dylib</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.dylib</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array><string>dylib</string></array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.directory</string></array>
+			<key>UTTypeDescription</key>
+			<string>LiveContainer tweak framework</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.tweak-framework</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array><string>framework</string></array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array><string>public.data</string></array>
+			<key>UTTypeDescription</key>
+			<string>Signing Certificate (PKCS#12)</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.kdt.livecontainer.p12</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>p12</string>
+					<string>pfx</string>
+					<string>pkcs12</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

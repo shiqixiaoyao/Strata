@@ -95,8 +95,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         return sharedAppSortManager.sortedHiddenApps
     }
     
+    @ObservedObject private var phoneApps = StrataPhoneApps.shared
+
+    @AppStorage(StrataLauncherOrder.key, store: LCUtils.appGroupUserDefault) private var launcherOrder = "[]"
     var launcherApps: [LCAppModel] {
-        sortedApps + (builtInSideStore.map { [$0] } ?? [])
+        StrataLauncherOrder.apply(sortedApps + (builtInSideStore.map { [$0] } ?? []) + phoneApps.models + (StrataBuiltInSettings.model.map { [$0] } ?? []), order: launcherOrder)
     }
 
     var filteredLauncherApps: [LCAppModel] {
@@ -106,6 +109,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
 
     func manageLauncherApp(_ app: LCAppModel) {
+        if app.appInfo is StrataSettingsAppInfo { NotificationCenter.default.post(name: .strataOpenSettings, object: nil); return }
+        if app.appInfo is StrataPhoneAppInfo {
+            openNavigationView(view: AnyView(StrataPhoneAppsView()))
+            return
+        }
         if app.appInfo is BuiltInSideStoreAppInfo {
             sharedModel.selectedTab = .settings
         } else {
@@ -148,7 +156,12 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         NavigationView {
             ZStack {
                 NavigationLink(destination: navigateTo, isActive: $isNavigationActive) { EmptyView() }.hidden()
-                if liveBoardMode == "ios" && !manageLibrary {
+                if liveBoardMode == "switchboard" && !manageLibrary {
+                    StrataSwitchboard(apps: launcherApps, launch: { app in Task { await launchFromLiveBoard(app) } }, manage: manageLauncherApp, openInterface: openInterface, openManagement: { manageLibrary = true }, launchWithJIT: { app in Task { await launchFromLiveBoard(app, forceJIT: true) } }, launchMultitask: { app in Task { await launchFromLiveBoard(app, multitask: true) } }, launchInGameMode: { app in Task { await launchFromLiveBoard(app, gameMode: true) } }, launchWithMetalHUD: { app in Task { await launchFromLiveBoard(app, metalHUD: true) } })
+                } else if let style = StrataGalleryStyle(rawValue: liveBoardMode), !manageLibrary {
+                    StrataGalleryScreen(style: style, apps: launcherApps, launch: { app in Task { await launchFromLiveBoard(app) } }, manage: manageLauncherApp, openInterface: openInterface, openManagement: { manageLibrary = true }, launchWithJIT: { app in Task { await launchFromLiveBoard(app, forceJIT: true) } }, launchMultitask: { app in Task { await launchFromLiveBoard(app, multitask: true) } }, launchInGameMode: { app in Task { await launchFromLiveBoard(app, gameMode: true) } }, launchWithMetalHUD: { app in Task { await launchFromLiveBoard(app, metalHUD: true) } })
+                        .id(style.rawValue)
+                } else if liveBoardMode == "ios" && !manageLibrary {
                     LiveBoardHomeScreen(apps: launcherApps,
                                         launch: { app in Task { await launchFromLiveBoard(app) } },
                                         manage: manageLauncherApp,
@@ -173,7 +186,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Button(manageLibrary ? "Back to launcher" : "Manage apps") {
+                    Button(manageLibrary ? "Back to launcher".loc : "Manage apps".loc) {
                         manageLibrary.toggle()
                     }
                     LazyVStack {
@@ -183,7 +196,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         }
                     }
 
-                }.padding()
+                }.padding().padding(.bottom, 72) // clear the floating search field in landscape
 
                 VStack {
                     if LCUtils.appGroupUserDefault.bool(forKey: "LCStrictHiding") {
@@ -236,7 +249,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                     }
 
                     let appCount = sharedModel.isHiddenAppUnlocked ? filteredApps.count + filteredHiddenApps.count : filteredApps.count
-                    Text(appCount > 0 || searchContext.debouncedQuery != "" ? "lc.appList.appCounter %lld".localizeWithFormat(appCount) : (sharedModel.multiLCStatus == 2 ? "lc.appList.convertToSharedToShowInLC2".loc : "lc.appList.installTip".loc))
+                    Text(appCount > 0 || searchContext.debouncedQuery != "" ? LCStr("strata.appList.appCounter", "%lld apps", appCount) : (sharedModel.multiLCStatus == 2 ? "lc.appList.convertToSharedToShowInLC2".loc : "lc.appList.installTip".loc))
                         .padding(.horizontal)
                         .foregroundStyle(.gray)
                         .animation(searchContext.isTyping ? nil : .easeInOut, value: appCount)
@@ -257,17 +270,18 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             .coordinateSpace(name: "scroll")
             .onAppear {
                 StrataControlsLibrary.publish(launcherApps)
-                consumeControlsLaunch()
+                consumeControlsLaunch(); consumeResumeLaunch()
                 if !didAppear {
                     onAppear()
                 }
             }
             
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("StrataLaunchFromControls"))) { _ in consumeControlsLaunch() }
+            .onReceive(NotificationCenter.default.publisher(for: .strataOpenAppManagement)) { _ in manageLibrary = true }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                 StrataControlsLibrary.publish(launcherApps); consumeControlsLaunch()
             }
-            .onChange(of: launcherApps.map(liveBoardAppKey)) { _ in StrataControlsLibrary.publish(launcherApps); consumeControlsLaunch() }
+            .onChange(of: launcherApps.map(liveBoardAppKey)) { _ in StrataControlsLibrary.publish(launcherApps); consumeControlsLaunch(); consumeResumeLaunch() }
             .navigationTitle("LiveBoard")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -545,6 +559,21 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         await openWebView(urlString: urlToOpen)
         
     }
+    /// Reopens the guest iOS terminated while it was in the background (one shot, max 6 hours old).
+    /// Uses the normal launch path so JIT, Game Mode and signing checks still apply.
+    @MainActor private func consumeResumeLaunch() {
+        guard !sharedModel.registryLoading, let value = UserDefaults.standard.dictionary(forKey: "StrataResumeGuest") else { return }
+        guard let key = value["key"] as? String, let time = value["time"] as? Double else { UserDefaults.standard.removeObject(forKey: "StrataResumeGuest"); return }
+        guard let app = launcherApps.first(where: { liveBoardAppKey($0) == key }) else {
+            if Date().timeIntervalSince1970 - time > 60 { UserDefaults.standard.removeObject(forKey: "StrataResumeGuest") }
+            return
+        }
+        UserDefaults.standard.removeObject(forKey: "StrataResumeGuest")
+        let enabled = LCUtils.appGroupUserDefault.object(forKey: "StrataResumeAfterSystemClose") as? Bool ?? false
+        let age = Date().timeIntervalSince1970 - time
+        guard enabled, age >= 0, age < 6 * 3600 else { return }
+        Task { await launchFromLiveBoard(app) }
+    }
     @MainActor private func consumeControlsLaunch() {
         guard let command = StrataControlsLibrary.takeRequest(validKeys: launcherApps.map(liveBoardAppKey)),
               let app = launcherApps.first(where: { liveBoardAppKey($0) == command.key }) else { return }
@@ -557,6 +586,16 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
 
     @MainActor
     func launchFromLiveBoard(_ app: LCAppModel, forceJIT: Bool = false, gameMode: Bool = false, multitask: Bool? = nil, metalHUD: Bool = false) async {
+        if app.appInfo is StrataSettingsAppInfo { NotificationCenter.default.post(name: .strataOpenSettings, object: nil); return }
+        // Recent apps for the card switcher, most recent first.
+        let recentKey = liveBoardAppKey(app)
+        var recents = LCUtils.appGroupUserDefault.stringArray(forKey: "StrataRecentApps") ?? []
+        recents.removeAll { $0 == recentKey }; recents.insert(recentKey, at: 0)
+        LCUtils.appGroupUserDefault.set(Array(recents.prefix(12)), forKey: "StrataRecentApps")
+        if let shortcut = app.appInfo as? StrataPhoneAppInfo {
+            do { try await phoneApps.open(shortcut.entryID) } catch { errorInfo = error.localizedDescription; errorShow = true }
+            return
+        }
         StrataControlsLibrary.publish(launcherApps)
         let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first { $0.isKeyWindow }
         LiveBoardOrientation.setLandscape(false, window: window)
@@ -564,8 +603,14 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             LCUtils.openSideStore(delegate: self)
             return
         }
+        // Games and Ports launch through the Game Mode path automatically (full screen, Game Mode metadata),
+        // unless the user explicitly asked for a multitask window.
+        let category = LiveBoardSharedCategories.category(forKey: liveBoardAppKey(app))
+        // With seamless switching, Game Mode already applies to Strata as a whole; keep games switchable.
+        let seamless = LCUtils.appGroupUserDefault.object(forKey: "StrataSeamlessSwitching") as? Bool ?? true
+        let automaticGameMode = !seamless && multitask != true && (category == "Games" || category == "Ports")
         do {
-            try await app.launchFromLibrary(multitask: multitask, forceJIT: forceJIT, gameMode: gameMode, metalHUD: metalHUD)
+            try await app.launchFromLibrary(multitask: multitask, forceJIT: forceJIT, gameMode: gameMode || automaticGameMode, metalHUD: metalHUD)
         } catch {
             errorInfo = error.localizedDescription
             errorShow = true
@@ -600,7 +645,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
         if try await selectInstalled() { return }
         guard let bundled = Bundle.main.url(forResource: "LiveExec32", withExtension: "ipa", subdirectory: "BundledRuntime") else {
-            throw "The included LiveExec32 runtime is missing from this build."
+            throw "The included LiveExec32 runtime is missing from this build.".loc
         }
         installprogressVisible = true
         defer { installprogressVisible = false }
@@ -610,7 +655,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             if try await selectInstalled() { return }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
-        throw "LiveExec32 installation did not finish. Open Apps to check the runtime before retrying. JIT is still required for 32-bit apps."
+        throw "LiveExec32 installation did not finish. Open Apps to check the runtime before retrying. JIT is still required for 32-bit apps.".loc
     }
 
     func onAppear() {
@@ -850,31 +895,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         }
         
         if let appToReplace {
-            // copy previous configration to new app
-            finalNewApp.autoSaveDisabled = true
-            finalNewApp.isLocked = appToReplace.appInfo.isLocked
-            finalNewApp.isHidden = appToReplace.appInfo.isHidden
-            finalNewApp.isJITNeeded = appToReplace.appInfo.isJITNeeded
-            finalNewApp.isShared = appToReplace.appInfo.isShared
-            finalNewApp.spoofSDKVersion = appToReplace.appInfo.spoofSDKVersion
-            finalNewApp.doSymlinkInbox = appToReplace.appInfo.doSymlinkInbox
-            finalNewApp.containerInfo = appToReplace.appInfo.containerInfo
-            finalNewApp.tweakFolder = appToReplace.appInfo.tweakFolder
-            finalNewApp.selectedLanguage = appToReplace.appInfo.selectedLanguage
-            finalNewApp.dataUUID = appToReplace.appInfo.dataUUID
-            finalNewApp.orientationLock = appToReplace.appInfo.orientationLock
-            finalNewApp.dontInjectTweakLoader = appToReplace.appInfo.dontInjectTweakLoader
-            finalNewApp.hideLiveContainer = appToReplace.appInfo.hideLiveContainer
-            finalNewApp.dontLoadTweakLoader = appToReplace.appInfo.dontLoadTweakLoader
-            finalNewApp.doUseLCBundleId = appToReplace.appInfo.doUseLCBundleId
-            finalNewApp.fixFilePickerNew = appToReplace.appInfo.fixFilePickerNew
-            finalNewApp.fixLocalNotification = appToReplace.appInfo.fixLocalNotification
-            finalNewApp.lastLaunched = appToReplace.appInfo.lastLaunched
-            finalNewApp.jitLaunchScriptJs = appToReplace.appInfo.jitLaunchScriptJs
-            finalNewApp.multitaskSpecified = appToReplace.appInfo.multitaskSpecified
-            finalNewApp.classicMode = appToReplace.appInfo.classicMode
-            finalNewApp.autoSaveDisabled = false
-            finalNewApp.save()
+            LCAppModel.copy(fromApp: appToReplace, toAppInfo: finalNewApp)
         } else {
             // enable SDK version spoof by defalut
             finalNewApp.spoofSDKVersion = true
@@ -1253,7 +1274,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             })
             guard started else {
                 kill(Int32(pid), SIGKILL)
-                errorInfo = "Another built-in JIT operation is still running. Finish or cancel it in JIT setup first."
+                errorInfo = "Another built-in JIT operation is still running. Finish or cancel it in JIT setup first.".loc
                 errorShow = true
                 return
             }
@@ -1278,7 +1299,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 Task { await openWebView(urlString: url.absoluteString) }
                             }
                         } else {
-                            errorInfo = "StosDebug is not found. Please install it first and switch it to shared app."
+                            errorInfo = "StosDebug is not found. Please install it first and switch it to shared app.".loc
                             errorShow = true
                             return
                         }
@@ -1299,7 +1320,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         }) {
                             Task { await openWebView(urlString: url.absoluteString) }
                         } else {
-                            errorInfo = "StikDebug is not found. Please install it first and switch it to shared app."
+                            errorInfo = "StikDebug is not found. Please install it first and switch it to shared app.".loc
                             errorShow = true
                             return
                         }

@@ -5,7 +5,7 @@ extension LCAppModel {
     @MainActor
     func launchFromLibrary(multitask: Bool? = nil, reuseExistingWindow: Bool = true, forceJIT: Bool = false, gameMode: Bool = false, metalHUD: Bool = false) async throws {
         if (gameMode || metalHUD), #available(iOS 16.0, *), let folder = uiSelectedContainer?.folderName, MultitaskManager.isUsing(container: folder) {
-            throw "Close this running app from Strata controls, then choose the launch option again."
+            throw "Close this running app from Strata controls, then choose the launch option again.".loc
         }
         if #available(iOS 16.0, *), reuseExistingWindow,
            let folder = uiSelectedContainer?.folderName,
@@ -20,7 +20,8 @@ extension LCAppModel {
         if appInfo.isLocked && !DataManager.shared.model.isHiddenAppUnlocked {
             guard try await LCUtils.authenticateUser() else { return }
         }
-        if gameMode {
+        // Declare Game Mode support once per app; re-sign only when the metadata actually changed.
+        if gameMode && !appInfo.gameModeSupportDeclared() {
             try appInfo.enableGameModeSupport()
             try await signApp(force: true)
         }

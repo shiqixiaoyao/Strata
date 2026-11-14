@@ -20,12 +20,45 @@ struct StrataWallpaper: Codable, Identifiable, Equatable {
         cache.countLimit = 16; cache.totalCostLimit = 48 * 1024 * 1024
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         reload()
+        recoverOrphans()
         let old = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("LiveBoard/wallpaper.jpg")
-        if items.isEmpty, FileManager.default.fileExists(atPath: old.path), let image = UIImage(contentsOfFile: old.path), let item = try? add(image: image, name: "Your photo") {
+        if items.isEmpty, FileManager.default.fileExists(atPath: old.path), let image = UIImage(contentsOfFile: old.path), let item = try? add(image: image, name: "Your photo".loc) {
             if LCUtils.appGroupUserDefault.string(forKey: "LiveBoardWallpaperStyle") == "photo" { LCUtils.appGroupUserDefault.set(item.id, forKey: "StrataSelectedWallpaper") }
         }
     }
-    func reload() { if let data = try? Data(contentsOf: directory.appendingPathComponent("Wallpapers.json")), let value = try? JSONDecoder().decode([StrataWallpaper].self, from: data) { items = value.filter { safe($0.file) && safe($0.thumbnail) } } }
+    func reload() {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("Wallpapers.json")),
+              let value = try? JSONDecoder().decode([StrataWallpaper].self, from: data) else {
+            items = []
+            return
+        }
+        let fm = FileManager.default
+        items = value.filter {
+            safe($0.file) &&
+            ($0.thumbnail.isEmpty || safe($0.thumbnail)) &&
+            fm.fileExists(atPath: directory.appendingPathComponent($0.file).path)
+        }
+    }
+
+    /// Strata: 覆盖安装或换签名身份后 Wallpapers.json 可能丢失、或与目录内容不一致，
+    /// 表现就是「动态壁纸不见了」。启动时扫描目录里残留的视频，把索引中没有的
+    /// 条目补回来，并按需补生成预览图，用户无需重新导入。
+    func recoverOrphans() {
+        let dir = directory
+        let known = Set(items.flatMap { [$0.file, $0.thumbnail] })
+        DispatchQueue.global(qos: .utility).async {
+            let found = strataScanWallpaperOrphans(directory: dir, known: known)
+            guard !found.isEmpty else { return }
+            DispatchQueue.main.async {
+                let existing = Set(self.items.map { $0.file })
+                let fresh = found.filter { !existing.contains($0.file) }
+                guard !fresh.isEmpty else { return }
+                self.items += fresh
+                try? JSONEncoder().encode(self.items).write(to: dir.appendingPathComponent("Wallpapers.json"), options: .atomic)
+                NSLog("[Strata][Wallpaper] recovered \(fresh.count) orphan(s)")
+            }
+        }
+    }
     private func safe(_ file: String) -> Bool { !file.isEmpty && file == URL(fileURLWithPath: file).lastPathComponent && !file.contains("..") }
     func url(_ item: StrataWallpaper) -> URL { directory.appendingPathComponent(item.file) }
     func image(_ item: StrataWallpaper) -> UIImage? {
@@ -68,6 +101,33 @@ struct StrataWallpaper: Codable, Identifiable, Equatable {
             try commit(item); return item
         } catch { try? FileManager.default.removeItem(at: url(item)); throw error }
     }
+}
+
+/// 全局函数：不捕获 @MainActor 的实例，可安全放后台队列执行。
+/// 只处理视频（动态壁纸）；缩略图缺失时用首帧补一张。
+private func strataScanWallpaperOrphans(directory dir: URL, known: Set<String>) -> [StrataWallpaper] {
+    let fm = FileManager.default
+    let names = (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
+    let videoExts: Set<String> = ["mov", "mp4", "m4v"]
+    var out: [StrataWallpaper] = []
+    for name in names where videoExts.contains((name as NSString).pathExtension.lowercased()) {
+        guard !known.contains(name) else { continue }
+        let id = (name as NSString).deletingPathExtension
+        var thumb = id + "-preview.jpg"
+        let thumbURL = dir.appendingPathComponent(thumb)
+        if !fm.fileExists(atPath: thumbURL.path) {
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: dir.appendingPathComponent(name)))
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 720, height: 1280)
+            if let cg = try? generator.copyCGImage(at: .zero, actualTime: nil),
+               let data = UIImage(cgImage: cg).jpegData(compressionQuality: 0.85) {
+                try? data.write(to: thumbURL, options: .atomic)
+            }
+        }
+        if !fm.fileExists(atPath: thumbURL.path) { thumb = "" }
+        out.append(StrataWallpaper(id: id, name: id, file: name, thumbnail: thumb, live: true))
+    }
+    return out
 }
 
 final class StrataPlayerSurface: UIView {
