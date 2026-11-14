@@ -1,11 +1,11 @@
 {
-  "version": "4.0.3",
-  "tag": "v4.0.3",
-  "developmentRevision": 60,
+  "version": "4.0.4",
+  "tag": "v4.0.4",
+  "developmentRevision": 61,
   "liveContainerBase": "nightly 9d6ea09",
   "sourceBase": "285f338b7713ce1f4c67addea9c60bf0121121c2",
   "previousRelease": "v3.0.0",
-  "ipaSha256": "c41eb7142e9e7cdc71e7075afd098dbfe5966809a378bda11da167d89d32fa75",
+  "ipaSha256": "8c43d6dcafc27530afa76ff9fb36f36a9418a82e172d2e8024e324faee24c226",
   "bundleVersionRetainedForCompatibility": true,
-  "ipaSize": 38676621
+  "ipaSize": 38687978
 }

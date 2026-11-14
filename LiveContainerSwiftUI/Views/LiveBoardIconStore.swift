@@ -7,13 +7,22 @@ import CoreImage
     private static let backgrounds = NSCache<NSString, UIImage>()
     private static let context = CIContext(options: [.cacheIntermediates: false])
     static func invalidate() { icons.removeAllObjects(); backgrounds.removeAllObjects() }
+    /// 更新安装会复用同一个 bundle 路径，只按路径做 key 会命中换包前的旧图标，
+    /// 于是「更新完图标没变」。把安装时间也算进 key，新包自然换一张新图。
+    private static func cacheKey(_ app: LCAppModel, dark: Bool) -> NSString {
+        let stamp = Int(app.appInfo.installationDate?.timeIntervalSince1970 ?? 0)
+        let path = app.appInfo.bundlePath()
+        let appearance = dark ? ":dark" : ":light"
+        let revision = LiveBoardAppCustomization.shared.revision
+        return "\(path)\(appearance):\(revision):\(stamp)" as NSString
+    }
     static func image(_ app: LCAppModel, dark: Bool) -> UIImage? {
         if let custom = LiveBoardAppCustomization.shared.image(app) { return custom }
         if app.bundleIdentifier.caseInsensitiveCompare("com.EduAlexxis.MusicManager") == .orderedSame,
            let replacement = UIImage(named: "LiveBoardByeTunes", in: .main, compatibleWith: nil) {
             return replacement
         }
-        let key = (app.appInfo.bundlePath() + (dark ? ":dark" : ":light") + ":" + String(LiveBoardAppCustomization.shared.revision)) as NSString
+        let key = cacheKey(app, dark: dark)
         if let image = icons.object(forKey: key) { return image }
         if let phone = app.appInfo as? StrataPhoneAppInfo, let image = phone.iconIsDarkIcon(dark) { icons.setObject(image, forKey: key); return image }
         guard let image = UIImage.generateIcon(forBundleURL: URL(fileURLWithPath: app.appInfo.bundlePath()), style: dark ? .Dark : .Light, hasBorder: false) else { return nil }
@@ -22,7 +31,7 @@ import CoreImage
         return cleaned
     }
     static func background(_ app: LCAppModel, dark: Bool) -> UIImage? {
-        let key = (app.appInfo.bundlePath() + (dark ? ":dark" : ":light") + ":" + String(LiveBoardAppCustomization.shared.revision)) as NSString
+        let key = cacheKey(app, dark: dark)
         if let image = backgrounds.object(forKey: key) { return image }
         guard let source = image(app, dark: dark) else { return nil }
         let format = UIGraphicsImageRendererFormat(); format.scale = 1

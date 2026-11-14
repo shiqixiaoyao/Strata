@@ -87,7 +87,14 @@ struct LiveBoardHomeScreen: View {
     @State private var wallpaperError: String?
 
     private var appKeys: [String] { apps.map(liveBoardAppKey) }
+    private var appIdentities: [ObjectIdentifier] { apps.map(ObjectIdentifier.init) }
     @State private var appMap: [String: LCAppModel] = [:]
+    /// 刚安装 / 刚更新完的图标 key。用静态变量跨视图重建保留：进入管理库安装时
+    /// 主屏幕会被 `manageLibrary` 分支整个换掉，回来时本视图是新建的。
+    private static var knownKeys: Set<String> = []
+    private static var knownModels: [String: ObjectIdentifier] = [:]
+    private static var bootstrapped = false
+    @State private var entranceKeys: Set<String> = []
     private var favoriteKeys: [String] { (try? JSONDecoder().decode([String].self, from: Data(favorites.utf8))) ?? [] }
     private var wallpaperURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -144,6 +151,8 @@ struct LiveBoardHomeScreen: View {
                 }
             })
             .onChange(of: appKeys) { _ in reconcile() }
+            // 覆盖安装会沿用同一个 bundle 目录，key 不变但模型换了人 → 单独盯一次身份。
+            .onChange(of: appIdentities) { _ in reconcile() }
             .onChange(of: layout) { savedLayout = $0.encoded; page = min(page, layout.pages.count + 1) }
             .onAppear {
                 layout = LiveBoardHomeLayout.decode(savedLayout)
@@ -339,7 +348,7 @@ struct LiveBoardHomeScreen: View {
             } else if let app = appMap[key] {
                 LiveBoardHomeIcon(app: app, title: title(key), size: largeIcons ? 76 : 64,
                                   showLabel: showLabel, dark: darkIcons, editing: editing,
-                                  reduceMotion: reduceMotion, action: {
+                                  reduceMotion: reduceMotion, animateEntrance: entranceKeys.contains(key), action: {
                     if editing { return }
                     launch(app)
                 })
@@ -1011,7 +1020,34 @@ struct LiveBoardHomeScreen: View {
         let file = layout.widgets.first { $0.id == id }?.photo
         layout.removeWidget(id); widgetPhotos.remove(file)
     }
-    private func reconcile() { appMap = Dictionary(apps.map { (liveBoardAppKey($0), $0) }, uniquingKeysWith: { first, _ in first }); layout.reconcile(appKeys, favorites: favoriteKeys) }
+    private func reconcile() {
+        // 只有「见过一轮」之后才算得出新增/替换；冷启动加载整屏图标不该挨个弹一遍。
+        var installed: Set<String> = []
+        var replaced: Set<String> = []
+        if Self.bootstrapped {
+            installed.formUnion(Set(appKeys).subtracting(Self.knownKeys))
+            for app in apps {
+                let key = liveBoardAppKey(app)
+                if let previous = Self.knownModels[key], previous != ObjectIdentifier(app) { replaced.insert(key) }
+            }
+        }
+        Self.knownKeys = Set(appKeys)
+        Self.knownModels = Dictionary(apps.map { (liveBoardAppKey($0), ObjectIdentifier($0)) }, uniquingKeysWith: { first, _ in first })
+        Self.bootstrapped = true
+        appMap = Dictionary(apps.map { (liveBoardAppKey($0), $0) }, uniquingKeysWith: { first, _ in first })
+        layout.reconcile(appKeys, favorites: favoriteKeys)
+
+        let entered = installed.union(replaced)
+        guard !entered.isEmpty else { return }
+        entranceKeys.formUnion(entered)
+        // 新装的 App 落在最后一页；人还在第一页的话动画等于白放，跟着滑过去。
+        if let key = apps.map(liveBoardAppKey).first(where: { installed.contains($0) }),
+           let index = layout.pages.firstIndex(where: { slots in slots.contains(where: { $0 == key }) }) {
+            page = index + 1
+        }
+        // 入场 / 更新动画各播一次，之后撤掉标记，避免每次重绘都重播。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { entranceKeys.subtract(entered) }
+    }
     private func title(_ key: String) -> String { appMap[key].map { appCustomization.name($0) } ?? "App" }
     private func addPage() { layout.pages.append(Array(repeating: nil, count: LiveBoardHomeLayout.capacity)); page = layout.pages.count }
     private func setCategory(_ value: String?, key: String) {
@@ -1040,15 +1076,18 @@ private struct LiveBoardHomeIcon: View {
     let dark: Bool
     let editing: Bool
     let reduceMotion: Bool
+    let animateEntrance: Bool
     let action: () -> Void
+
+    @State private var appeared = false
+    @State private var bump: CGFloat = 1
+
+    private var corner: CGFloat { size * 0.23 }
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 5) {
-                LiveBoardIconImage(app: app, dark: dark)
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
-                    .overlay { if app.isSigningInProgress { ProgressView(value: app.signProgress).padding(8).background(.ultraThinMaterial) } }
-                    .modifier(LiveBoardEditWobble(active: editing && !reduceMotion))
+                artwork
                 if showLabel {
                     Text(title).font(.system(size: 12, weight: .regular)).lineLimit(1)
                         .foregroundColor(.white).shadow(color: .black.opacity(0.85), radius: 2, x: 0, y: 1).frame(width: 82)
@@ -1060,6 +1099,68 @@ private struct LiveBoardHomeIcon: View {
         .accessibilityLabel(title)
         .accessibilityHint(editing ? "Drag to rearrange" : "Launch app. Touch and hold for more actions.")
 
+    }
+
+    /// 图标本体。新安装的从 0.62 倍弹到位，覆盖安装的收一下再弹回，
+    /// 签名 / 安装中的压暗并显示环形进度（iOS 桌面的做法）。
+    private var artwork: some View {
+        LiveBoardIconImage(app: app, dark: dark)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+            .overlay { signingOverlay }
+            .modifier(LiveBoardEditWobble(active: editing && !reduceMotion))
+            // 未标记进场的图标首帧就按正常尺寸画，避免整屏闪一下。
+            .scaleEffect(((appeared || !animateEntrance) ? 1 : 0.62) * bump)
+            .opacity((appeared || !animateEntrance) ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: app.isSigningInProgress)
+            .onAppear {
+                guard !appeared else { return }
+                if animateEntrance && !reduceMotion {
+                    withAnimation(.spring(response: 0.46, dampingFraction: 0.72)) { appeared = true }
+                } else {
+                    appeared = true
+                }
+            }
+            // 覆盖安装：key 没变，模型换了，给一次「重新装好」的收放。
+            .onChange(of: animateEntrance) { wants in if wants { playBump(peak: 0.9) } }
+            // 签名结束：进度走满后弹一下。
+            .onChange(of: app.isSigningInProgress) { signing in
+                if !signing && app.signProgress > 0.99 { playBump(peak: 1.08) }
+            }
+    }
+
+    @ViewBuilder private var signingOverlay: some View {
+        if app.isSigningInProgress {
+            ZStack {
+                RoundedRectangle(cornerRadius: corner, style: .continuous).fill(Color.black.opacity(0.32))
+                ring
+            }
+            .transition(.opacity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var ring: some View {
+        let line = max(2, size * 0.052)
+        let clamped = min(1, max(0.02, app.signProgress))
+        let fraction = CGFloat(clamped)
+        return ZStack {
+            Circle().stroke(Color.white.opacity(0.28), lineWidth: line)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(Color.white, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: app.signProgress)
+        }
+        .frame(width: size * 0.44, height: size * 0.44)
+    }
+
+    private func playBump(peak: CGFloat) {
+        guard !reduceMotion else { return }
+        withAnimation(.easeOut(duration: 0.12)) { bump = peak }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.13) {
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.66)) { bump = 1 }
+        }
     }
 }
 private struct LiveBoardEditWobble: ViewModifier {
